@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Покажи эмоцию! — клетка 21</title>
+<style>
+  :root{
+    --accent:#DFCCA4;
+    --bg1:#0f172a;
+    --bg2:#1e293b;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0; padding:0; height:100%; overflow:hidden;
+    font-family:'Trebuchet MS','Segoe UI',sans-serif;
+    background: radial-gradient(circle at 50% 0%, var(--bg2), var(--bg1));
+    touch-action:none;
+    user-select:none;
+    color:#fff;
+  }
+  #game{
+    position:relative;
+    width:100%;
+    height:100dvh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:16px;
+    padding:16px;
+  }
+  h1{
+    font-size:28px;
+    margin:0;
+    color:var(--accent);
+    text-shadow:0 3px 10px rgba(0,0,0,.5);
+    text-align:center;
+  }
+  #wheelWrap{
+    position:relative;
+    width:min(70vw, 280px);
+    height:min(70vw, 280px);
+  }
+  #pointer{
+    position:absolute;
+    top:-13px;
+    left:50%;
+    transform:translateX(-50%);
+    width:0; height:0;
+    border-left:14px solid transparent;
+    border-right:14px solid transparent;
+    border-top:24px solid var(--accent);
+    z-index:5;
+    filter:drop-shadow(0 3px 4px rgba(0,0,0,.4));
+  }
+  canvas#wheel{
+    width:100%;
+    height:100%;
+    border-radius:50%;
+    box-shadow:0 0 0 8px rgba(255,255,255,.06), 0 10px 40px rgba(0,0,0,.5);
+    transition: transform 4.5s cubic-bezier(.15,.85,.15,1);
+  }
+  #hub{
+    position:absolute;
+    top:50%; left:50%;
+    width:18%; height:18%;
+    transform:translate(-50%,-50%);
+    background:var(--accent);
+    border-radius:50%;
+    box-shadow:0 2px 10px rgba(0,0,0,.4);
+    z-index:4;
+  }
+  button{
+    font-size:19px;
+    font-weight:bold;
+    padding:13px 34px;
+    border:none;
+    border-radius:30px;
+    background:var(--accent);
+    color:#000;
+    box-shadow:0 6px 20px rgba(223,204,164,.35);
+    cursor:pointer;
+  }
+  button:active{ transform:scale(0.96); }
+  button:disabled{ opacity:.5; }
+  #camToggle{
+    background:transparent;
+    color:var(--accent);
+    border:2px solid var(--accent);
+    box-shadow:none;
+    font-size:14px;
+    padding:8px 18px;
+  }
+
+  #resultOverlay{
+    position:absolute; inset:0;
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    background:rgba(15,23,42,.95);
+    z-index:20;
+    text-align:center;
+    padding:20px;
+  }
+  #resultEmoji{ font-size:80px; line-height:1; }
+  #resultName{
+    font-size:26px;
+    font-weight:bold;
+    color:var(--accent);
+  }
+  #resultPrompt{
+    font-size:16px;
+    opacity:.85;
+    max-width:260px;
+  }
+  #countdown{
+    font-size:44px;
+    font-weight:bold;
+    color:var(--accent);
+    min-height:52px;
+  }
+  #mirrorBox{
+    width:150px;
+    height:150px;
+    border-radius:50%;
+    overflow:hidden;
+    border:3px solid var(--accent);
+    display:none;
+    background:#000;
+  }
+  #mirrorBox video{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    transform:scaleX(-1);
+  }
+  #praise{
+    font-size:20px;
+    color:var(--accent);
+    font-weight:bold;
+    display:none;
+  }
+</style>
+</head>
+<body>
+<div id="game">
+  <h1>Покажи эмоцию!</h1>
+
+  <div id="wheelWrap">
+    <div id="pointer"></div>
+    <canvas id="wheel" width="600" height="600"></canvas>
+    <div id="hub"></div>
+  </div>
+
+  <button id="spinBtn" onclick="spin()">Крутить!</button>
+  <button id="camToggle" onclick="toggleCamera()">📷 Включить зеркальце</button>
+
+  <div id="resultOverlay">
+    <div id="resultEmoji">😊</div>
+    <div id="resultName">Радость</div>
+    <div id="resultPrompt">Покажи такое же лицо!</div>
+    <div id="mirrorBox"><video id="mirrorVideo" autoplay playsinline muted></video></div>
+    <div id="countdown"></div>
+    <div id="praise">Молодец! 🎉</div>
+    <button id="nextBtn" onclick="closeResult()" style="display:none;">Крутить ещё</button>
+  </div>
+</div>
+
+<script>
+const emotions = [
+  { emoji:'😊', name:'Радость',    color:'#ffe57f' },
+  { emoji:'😢', name:'Грусть',     color:'#8fd1ff' },
+  { emoji:'😲', name:'Удивление',  color:'#ff9fc7' },
+  { emoji:'😠', name:'Злость',     color:'#ff8f6b' },
+  { emoji:'😨', name:'Испуг',      color:'#c9a8ff' },
+  { emoji:'😴', name:'Сонливость', color:'#a0f0a0' },
+  { emoji:'😆', name:'Смех',       color:'#7ee8fa' },
+  { emoji:'😐', name:'Спокойствие',color:'#DFCCA4' }
+];
+
+const canvas = document.getElementById('wheel');
+const ctx = canvas.getContext('2d');
+const spinBtn = document.getElementById('spinBtn');
+const camToggle = document.getElementById('camToggle');
+const resultOverlay = document.getElementById('resultOverlay');
+const resultEmoji = document.getElementById('resultEmoji');
+const resultName = document.getElementById('resultName');
+const countdownEl = document.getElementById('countdown');
+const praiseEl = document.getElementById('praise');
+const nextBtn = document.getElementById('nextBtn');
+const mirrorBox = document.getElementById('mirrorBox');
+const mirrorVideo = document.getElementById('mirrorVideo');
+
+const N = emotions.length;
+const anglePer = (Math.PI * 2) / N;
+let currentRotation = 0;
+let spinning = false;
+let cameraOn = false;
+let cameraStream = null;
+
+function drawWheel(){
+  const r = canvas.width / 2;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for(let i=0;i<N;i++){
+    const start = i * anglePer;
+    const end = start + anglePer;
+    ctx.beginPath();
+    ctx.moveTo(r, r);
+    ctx.arc(r, r, r, start, end);
+    ctx.closePath();
+    ctx.fillStyle = emotions[i].color;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(15,23,42,.5)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.save();
+    ctx.translate(r, r);
+    ctx.rotate(start + anglePer/2);
+    ctx.textAlign = 'right';
+    ctx.font = '52px sans-serif';
+    ctx.fillText(emotions[i].emoji, r - 28, 18);
+    ctx.restore();
+  }
+}
+drawWheel();
+
+let audioCtx;
+function playTick(){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = 'square';
+    o.frequency.setValueAtTime(900, audioCtx.currentTime);
+    g.gain.setValueAtTime(0.08, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + 0.05);
+  }catch(e){}
+}
+
+function playWin(){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    [660, 880, 1100].forEach((freq, i) => {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(freq, audioCtx.currentTime + i*0.1);
+      g.gain.setValueAtTime(0.2, audioCtx.currentTime + i*0.1);
+      g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i*0.1 + 0.25);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(audioCtx.currentTime + i*0.1);
+      o.stop(audioCtx.currentTime + i*0.1 + 0.25);
+    });
+  }catch(e){}
+}
+
+async function toggleCamera(){
+  if(cameraOn){
+    if(cameraStream){
+      cameraStream.getTracks().forEach(t => t.stop());
+    }
+    cameraStream = null;
+    cameraOn = false;
+    mirrorBox.style.display = 'none';
+    camToggle.textContent = '📷 Включить зеркальце';
+    return;
+  }
+  try{
+    cameraStream = await navigator.mediaDevices.getUserMedia({ video:true, audio:false });
+    mirrorVideo.srcObject = cameraStream;
+    cameraOn = true;
+    mirrorBox.style.display = 'block';
+    camToggle.textContent = '📷 Выключить зеркальце';
+  }catch(e){
+    alert('Не удалось включить камеру. Проверьте разрешения браузера.');
+  }
+}
+
+function spin(){
+  if(spinning) return;
+  spinning = true;
+  spinBtn.disabled = true;
+  praiseEl.style.display = 'none';
+  nextBtn.style.display = 'none';
+  countdownEl.textContent = '';
+
+  const winnerIndex = Math.floor(Math.random() * N);
+  const winnerCenterAngle = winnerIndex * anglePer + anglePer/2;
+  const targetAngle = (3 * Math.PI/2) - winnerCenterAngle;
+  const extraSpins = 5 + Math.floor(Math.random()*3);
+  const finalRotation = currentRotation - (currentRotation % (Math.PI*2)) + extraSpins * Math.PI*2 + targetAngle;
+
+  canvas.style.transform = `rotate(${finalRotation}rad)`;
+  currentRotation = finalRotation;
+
+  let tickCount = 0;
+  const tickInterval = setInterval(() => {
+    playTick();
+    tickCount++;
+    if(tickCount > 22) clearInterval(tickInterval);
+  }, 180);
+
+  setTimeout(() => {
+    clearInterval(tickInterval);
+    playWin();
+    showResult(emotions[winnerIndex]);
+    spinning = false;
+    spinBtn.disabled = false;
+  }, 4600);
+}
+
+function showResult(emotion){
+  resultEmoji.textContent = emotion.emoji;
+  resultName.textContent = emotion.name;
+  resultOverlay.style.display = 'flex';
+  runCountdown();
+}
+
+function runCountdown(){
+  let count = 3;
+  countdownEl.textContent = count;
+  const iv = setInterval(() => {
+    count--;
+    if(count > 0){
+      countdownEl.textContent = count;
+    } else {
+      clearInterval(iv);
+      countdownEl.textContent = '📸';
+      praiseEl.style.display = 'block';
+      nextBtn.style.display = 'inline-block';
+    }
+  }, 800);
+}
+
+function closeResult(){
+  resultOverlay.style.display = 'none';
+}
+</script>
+</body>
+</html>
