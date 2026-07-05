@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Повтори за следами! — клетки 22-28</title>
+<style>
+  :root{
+    --accent:#DFCCA4;
+    --bg1:#0f172a;
+    --bg2:#1e293b;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0; padding:0; height:100%; overflow:hidden;
+    font-family:'Trebuchet MS','Segoe UI',sans-serif;
+    background: radial-gradient(circle at 50% 0%, var(--bg2), var(--bg1));
+    touch-action:none;
+    user-select:none;
+    color:#fff;
+  }
+  #game{
+    position:relative;
+    width:100%;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 10px;
+    overflow:hidden;
+  }
+  h1{
+    font-size:24px;
+    margin:6px 0 2px;
+    color:var(--accent);
+    text-shadow:0 3px 10px rgba(0,0,0,.5);
+    text-align:center;
+  }
+  #hint{
+    font-size:13px;
+    opacity:.75;
+    text-align:center;
+    padding:0 16px;
+    margin-bottom:4px;
+    line-height:1.35;
+    min-height:18px;
+  }
+  #hud{
+    display:flex;
+    gap:14px;
+    margin-bottom:6px;
+  }
+  .hudChip{
+    background:rgba(255,255,255,.1);
+    padding:5px 14px;
+    border-radius:16px;
+    font-size:14px;
+    font-weight:bold;
+  }
+  #board{
+    position:relative;
+    flex:1;
+    width:100%;
+    max-width:340px;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    grid-template-rows:repeat(4, 1fr);
+    gap:10px;
+    padding:6px;
+  }
+  .pad{
+    border-radius:22px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:min(9vw, 40px);
+    cursor:pointer;
+    transition: transform .08s, filter .12s;
+    filter:brightness(0.55);
+    user-select:none;
+  }
+  .pad.p0{ background:#ff9fc7; grid-column:1; grid-row:1; }
+  .pad.p1{ background:#7ee8fa; grid-column:2; grid-row:1; }
+  .pad.p2{ background:#ffe57f; grid-column:1; grid-row:2; }
+  .pad.p3{ background:#a0f0a0; grid-column:2; grid-row:2; }
+  .pad.p4{ background:#c9a8ff; grid-column:1; grid-row:3; }
+  .pad.p5{ background:#ff9a76; grid-column:2; grid-row:3; }
+  .pad.p6{ background:var(--accent); grid-column:1 / span 2; grid-row:4; }
+  .pad.active{
+    filter:brightness(1.25);
+    transform:scale(1.05);
+  }
+  .pad.wrongFlash{
+    filter:brightness(1.4) saturate(0.3);
+  }
+  .pad:active{ transform:scale(0.94); }
+
+  button{
+    font-size:19px;
+    font-weight:bold;
+    padding:13px 34px;
+    border:none;
+    border-radius:30px;
+    background:var(--accent);
+    color:#000;
+    box-shadow:0 6px 20px rgba(223,204,164,.35);
+    cursor:pointer;
+    margin-top:8px;
+  }
+  button:active{ transform:scale(0.96); }
+
+  #startOverlay, #resultOverlay{
+    position:absolute; inset:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    background:rgba(15,23,42,.95);
+    z-index:20;
+    text-align:center;
+    padding:20px;
+  }
+  #resultOverlay{ display:none; }
+  .bigEmoji{ font-size:64px; }
+  .resultText{
+    font-size:24px;
+    font-weight:bold;
+    color:var(--accent);
+    max-width:280px;
+  }
+  @media (max-height: 600px){
+    h1{ font-size:19px; margin:2px 0; }
+    #hint{ font-size:11px; }
+  }
+</style>
+</head>
+<body>
+<div id="game">
+  <h1>Повтори за следами!</h1>
+  <div id="hint">Смотри, какие следы загораются, и повтори в том же порядке</div>
+  <div id="hud">
+    <div class="hudChip">Уровень: <span id="levelNum">1</span></div>
+    <div class="hudChip">Рекорд: <span id="bestNum">0</span></div>
+  </div>
+
+  <div id="board">
+    <div class="pad p0" data-idx="0">🐾</div>
+    <div class="pad p1" data-idx="1">🐾</div>
+    <div class="pad p2" data-idx="2">🐾</div>
+    <div class="pad p3" data-idx="3">🐾</div>
+    <div class="pad p4" data-idx="4">🐾</div>
+    <div class="pad p5" data-idx="5">🐾</div>
+    <div class="pad p6" data-idx="6">🐾</div>
+  </div>
+
+  <div id="startOverlay">
+    <div class="bigEmoji">🐾</div>
+    <h1 style="margin:0;">Повтори за следами!</h1>
+    <p style="max-width:260px; opacity:.85; margin:0;">Следы загораются по очереди — запомни и повтори тем же порядком. Каждый раунд последовательность длиннее!</p>
+    <button onclick="startGame()">Играть</button>
+  </div>
+
+  <div id="resultOverlay">
+    <div class="bigEmoji" id="resultEmoji">🎉</div>
+    <div class="resultText" id="resultText">Отличная память!</div>
+    <button onclick="startGame()">Играть ещё раз</button>
+  </div>
+</div>
+
+<script>
+const pads = Array.from(document.querySelectorAll('.pad'));
+const levelNumEl = document.getElementById('levelNum');
+const bestNumEl = document.getElementById('bestNum');
+const hintEl = document.getElementById('hint');
+const startOverlay = document.getElementById('startOverlay');
+const resultOverlay = document.getElementById('resultOverlay');
+const resultEmoji = document.getElementById('resultEmoji');
+const resultText = document.getElementById('resultText');
+
+const N_PADS = pads.length;
+const freqs = [329.6, 392.0, 440.0, 523.3, 587.3, 659.3, 784.0]; // приятные ноты для каждого следа
+
+let sequence = [];
+let playerStep = 0;
+let level = 1;
+let best = 0;
+let accepting = false;
+let playing = false;
+
+let audioCtx;
+function playTone(freq, dur=0.3){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    g.gain.setValueAtTime(0.22, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + dur);
+  }catch(e){}
+}
+
+function playWrong(){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(160, audioCtx.currentTime);
+    g.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + 0.4);
+  }catch(e){}
+}
+
+function playFanfare(){
+  [523.3, 659.3, 784.0, 1046.5].forEach((f,i) => {
+    setTimeout(() => playTone(f, 0.3), i*130);
+  });
+}
+
+function flashPad(idx, cls='active', dur=450){
+  const pad = pads[idx];
+  pad.classList.add(cls);
+  setTimeout(() => pad.classList.remove(cls), dur);
+}
+
+function addStep(){
+  sequence.push(Math.floor(Math.random()*N_PADS));
+}
+
+async function playSequence(){
+  playing = true;
+  accepting = false;
+  hintEl.textContent = 'Смотри внимательно...';
+  await sleep(500);
+  for(let i=0;i<sequence.length;i++){
+    const idx = sequence[i];
+    flashPad(idx, 'active', 420);
+    playTone(freqs[idx], 0.35);
+    await sleep(550);
+  }
+  playing = false;
+  accepting = true;
+  playerStep = 0;
+  hintEl.textContent = 'Теперь повтори!';
+}
+
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+function handlePadTap(idx){
+  if(!accepting || playing) return;
+  flashPad(idx, 'active', 250);
+  playTone(freqs[idx], 0.25);
+
+  if(idx === sequence[playerStep]){
+    playerStep++;
+    if(playerStep === sequence.length){
+      accepting = false;
+      level++;
+      levelNumEl.textContent = level;
+      if(level - 1 > best){
+        best = level - 1;
+        bestNumEl.textContent = best;
+      }
+      hintEl.textContent = 'Верно! Следующий раунд...';
+      setTimeout(() => {
+        addStep();
+        playSequence();
+      }, 900);
+    }
+  } else {
+    accepting = false;
+    flashPad(idx, 'wrongFlash', 500);
+    playWrong();
+    endGame();
+  }
+}
+
+function endGame(){
+  playing = false;
+  accepting = false;
+  const roundsCompleted = level - 1;
+  resultEmoji.textContent = roundsCompleted >= 5 ? '🏆' : roundsCompleted >= 2 ? '🎉' : '🐾';
+  resultText.textContent = roundsCompleted > 0
+    ? `Ты запомнил ${roundsCompleted} ${wordForm(roundsCompleted)}!`
+    : 'Попробуй ещё раз!';
+  if(roundsCompleted >= 3) playFanfare();
+  setTimeout(() => { resultOverlay.style.display = 'flex'; }, 400);
+}
+
+function wordForm(n){
+  const mod10 = n % 10, mod100 = n % 100;
+  if(mod10 === 1 && mod100 !== 11) return 'раунд';
+  if([2,3,4].includes(mod10) && ![12,13,14].includes(mod100)) return 'раунда';
+  return 'раундов';
+}
+
+function startGame(){
+  sequence = [];
+  level = 1;
+  playerStep = 0;
+  levelNumEl.textContent = level;
+  startOverlay.style.display = 'none';
+  resultOverlay.style.display = 'none';
+  addStep();
+  playSequence();
+}
+
+pads.forEach(pad => {
+  pad.addEventListener('pointerdown', () => handlePadTap(parseInt(pad.dataset.idx)));
+});
+</script>
+</body>
+</html>
