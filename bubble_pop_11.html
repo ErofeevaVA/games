@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Лопни пузырь — клетка 11</title>
+<style>
+  :root{
+    --bg1:#0f172a;
+    --bg2:#1e293b;
+    --accent:#ff6fa5;
+    --accent2:#7ee8fa;
+    --win:#7CFC7C;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{
+    margin:0; padding:0; height:100%; overflow:hidden;
+    font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+    background: radial-gradient(circle at 50% 0%, var(--bg2), var(--bg1));
+    touch-action:none;
+    user-select:none;
+  }
+  #game{
+    position:relative;
+    width:100%;
+    height:100dvh;
+    overflow:hidden;
+  }
+  #hud{
+    position:absolute; top:0; left:0; right:0;
+    display:flex; justify-content:space-between; align-items:center;
+    padding:14px 18px;
+    z-index:10;
+    color:#fff;
+    font-size:18px;
+    text-shadow:0 2px 6px rgba(0,0,0,.4);
+  }
+  #timer{
+    background:rgba(255,255,255,.12);
+    padding:6px 14px;
+    border-radius:20px;
+    font-weight:bold;
+  }
+  #score{
+    background:rgba(255,255,255,.12);
+    padding:6px 14px;
+    border-radius:20px;
+    font-weight:bold;
+  }
+  .bubble{
+    position:absolute;
+    border-radius:50%;
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: inset -6px -6px 14px rgba(0,0,0,.15), inset 6px 6px 14px rgba(255,255,255,.5);
+    transition: transform .08s ease-out;
+  }
+  .bubble:active{ transform:scale(0.9); }
+  .pop-particle{
+    position:absolute;
+    border-radius:50%;
+    pointer-events:none;
+  }
+  #startScreen, #endScreen{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:18px;
+    color:#fff;
+    text-align:center;
+    z-index:20;
+    background: radial-gradient(circle at 50% 30%, rgba(255,111,165,.15), transparent 60%), var(--bg1);
+    padding:20px;
+  }
+  #endScreen{ display:none; }
+  h1{
+    font-size:34px;
+    margin:0;
+    color:#DFCCA4;
+    text-shadow:0 3px 10px rgba(0,0,0,.5);
+  }
+  p{
+    font-size:17px;
+    max-width:280px;
+    line-height:1.5;
+    opacity:.85;
+    margin:0;
+  }
+  button{
+    font-size:20px;
+    font-weight:bold;
+    padding:14px 36px;
+    border:none;
+    border-radius:30px;
+    background:#DFCCA4;
+    color:#000;
+    box-shadow:0 6px 20px rgba(223,204,164,.4);
+    cursor:pointer;
+  }
+  button:active{ transform:scale(0.96); }
+  #bigEmoji{ font-size:60px; }
+  #starRow{ font-size:34px; letter-spacing:6px; }
+</style>
+</head>
+<body>
+<div id="game">
+  <div id="hud" style="display:none;">
+    <div id="timer">⏱ 30</div>
+    <div id="score">🎈 0 / 15</div>
+  </div>
+
+  <div id="startScreen">
+    <div id="bigEmoji">🫧</div>
+    <h1>Лопни пузырь!</h1>
+    <p>Нажимай на пузыри, пока они не лопнут.<br>Успей лопнуть 15 штук за 30 секунд!</p>
+    <button onclick="startGame()">Играть</button>
+  </div>
+
+  <div id="endScreen">
+    <div id="bigEmoji">🎉</div>
+    <h1 id="endTitle">Отлично!</h1>
+    <div id="starRow">⭐⭐⭐</div>
+    <p id="endText">Ты лопнул все пузыри!</p>
+    <button onclick="startGame()">Играть ещё раз</button>
+  </div>
+</div>
+
+<script>
+const game = document.getElementById('game');
+const hud = document.getElementById('hud');
+const timerEl = document.getElementById('timer');
+const scoreEl = document.getElementById('score');
+const startScreen = document.getElementById('startScreen');
+const endScreen = document.getElementById('endScreen');
+
+const GOAL = 15;
+const TIME_LIMIT = 30;
+
+let score = 0;
+let timeLeft = TIME_LIMIT;
+let bubbles = [];
+let spawnInterval = null;
+let timerInterval = null;
+let running = false;
+
+const colors = [
+  ['#ff9fc7','#ff6fa5'],
+  ['#7ee8fa','#3fb6ee'],
+  ['#ffe57f','#ffc93f'],
+  ['#a0f0a0','#5fd15f'],
+  ['#c9a8ff','#9d6bff']
+];
+
+// Простой "поп" звук через Web Audio API — без внешних файлов
+let audioCtx;
+function playPop(){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(600, audioCtx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(180, audioCtx.currentTime + 0.12);
+    g.gain.setValueAtTime(0.25, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + 0.15);
+  }catch(e){}
+}
+
+function rand(min, max){ return Math.random() * (max - min) + min; }
+
+function spawnBubble(){
+  if(!running) return;
+  const size = rand(50, 95);
+  const el = document.createElement('div');
+  el.className = 'bubble';
+  const [c1, c2] = colors[Math.floor(Math.random()*colors.length)];
+  el.style.width = size + 'px';
+  el.style.height = size + 'px';
+  el.style.background = `radial-gradient(circle at 35% 30%, #fff8, ${c1} 40%, ${c2} 100%)`;
+  const gameW = game.clientWidth;
+  const gameH = game.clientHeight;
+  const x = rand(10, gameW - size - 10);
+  el.style.left = x + 'px';
+  el.style.top = (gameH + size) + 'px';
+
+  game.appendChild(el);
+  bubbles.push(el);
+
+  const duration = rand(3.5, 5.5);
+  const endY = -size - 20;
+  const startTime = performance.now();
+
+  function floatUp(now){
+    if(!el.isConnected) return;
+    const t = (now - startTime) / (duration * 1000);
+    if(t >= 1){
+      removeBubble(el, false);
+      return;
+    }
+    const currentTop = gameH + size - t * (gameH + size - endY);
+    el.style.top = currentTop + 'px';
+    el.style.transform = `translateX(${Math.sin(t*6 + x) * 12}px)`;
+    requestAnimationFrame(floatUp);
+  }
+  requestAnimationFrame(floatUp);
+
+  el.addEventListener('pointerdown', () => popBubble(el));
+}
+
+function removeBubble(el, popped){
+  const idx = bubbles.indexOf(el);
+  if(idx > -1) bubbles.splice(idx, 1);
+  if(el.isConnected) el.remove();
+}
+
+function popBubble(el){
+  if(!running || !el.isConnected) return;
+  playPop();
+  spawnParticles(el);
+  removeBubble(el, true);
+  score++;
+  scoreEl.textContent = `🎈 ${score} / ${GOAL}`;
+  if(score >= GOAL){
+    endGame(true);
+  }
+}
+
+function spawnParticles(el){
+  const rect = el.getBoundingClientRect();
+  const gameRect = game.getBoundingClientRect();
+  const cx = rect.left - gameRect.left + rect.width/2;
+  const cy = rect.top - gameRect.top + rect.height/2;
+  const bg = el.style.background;
+  for(let i=0;i<8;i++){
+    const p = document.createElement('div');
+    p.className = 'pop-particle';
+    const s = rand(6,14);
+    p.style.width = s+'px';
+    p.style.height = s+'px';
+    p.style.left = cx + 'px';
+    p.style.top = cy + 'px';
+    p.style.background = bg;
+    game.appendChild(p);
+    const angle = rand(0, Math.PI*2);
+    const dist = rand(30,70);
+    const dx = Math.cos(angle)*dist;
+    const dy = Math.sin(angle)*dist;
+    p.animate([
+      { transform:'translate(0,0)', opacity:1 },
+      { transform:`translate(${dx}px, ${dy}px)`, opacity:0 }
+    ], { duration: 450, easing:'ease-out' }).onfinish = () => p.remove();
+  }
+}
+
+function clearBubbles(){
+  bubbles.forEach(b => b.remove());
+  bubbles = [];
+}
+
+function startGame(){
+  score = 0;
+  timeLeft = TIME_LIMIT;
+  running = true;
+  clearBubbles();
+  startScreen.style.display = 'none';
+  endScreen.style.display = 'none';
+  hud.style.display = 'flex';
+  scoreEl.textContent = `🎈 0 / ${GOAL}`;
+  timerEl.textContent = `⏱ ${timeLeft}`;
+
+  clearInterval(spawnInterval);
+  clearInterval(timerInterval);
+
+  spawnInterval = setInterval(spawnBubble, 550);
+  spawnBubble();
+
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    timerEl.textContent = `⏱ ${timeLeft}`;
+    if(timeLeft <= 0){
+      endGame(false);
+    }
+  }, 1000);
+}
+
+function endGame(won){
+  running = false;
+  clearInterval(spawnInterval);
+  clearInterval(timerInterval);
+  clearBubbles();
+  hud.style.display = 'none';
+
+  const title = document.getElementById('endTitle');
+  const text = document.getElementById('endText');
+  const stars = document.getElementById('starRow');
+  const emoji = endScreen.querySelector('#bigEmoji');
+
+  if(won){
+    emoji.textContent = '🎉';
+    title.textContent = 'Ура, победа!';
+    text.textContent = `Ты лопнул все ${GOAL} пузырей!`;
+    stars.textContent = '⭐⭐⭐';
+  } else {
+    emoji.textContent = '🫧';
+    title.textContent = 'Почти получилось!';
+    text.textContent = `Ты лопнул ${score} из ${GOAL}. Попробуй ещё раз!`;
+    stars.textContent = score >= 10 ? '⭐⭐' : score >= 5 ? '⭐' : '·';
+  }
+  endScreen.style.display = 'flex';
+}
+</script>
+</body>
+</html>
