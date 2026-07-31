@@ -201,6 +201,7 @@ function buildPath(){
 }
 
 function draw(){
+  if(!pathPoints || pathPoints.length === 0) return;
   ctx.clearRect(0,0,W,H);
 
   // corridor (tolerance zone) as soft shading
