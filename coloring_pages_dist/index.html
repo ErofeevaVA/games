@@ -299,6 +299,10 @@
 </div>
 
 <script>
+function isMobileDevice(){
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+}
+
 function isTelegramInApp(){
   return /Telegram/i.test(navigator.userAgent) ||
          !!window.TelegramWebviewProxy ||
@@ -367,7 +371,7 @@ downloadBtn.addEventListener('click', async () => {
     const file = new File([blob], currentName, { type: blob.type });
 
     // На телефонах (особенно iPhone) открываем нативное меню "Сохранить/Поделиться"
-    if(navigator.canShare && navigator.canShare({ files: [file] })){
+    if(isMobileDevice() && navigator.canShare && navigator.canShare({ files: [file] })){
       await navigator.share({ files: [file], title: 'Раскраска' });
       downloadedNote.textContent = 'Готово! ✅';
       downloadedNote.className = 'success';
