@@ -186,18 +186,18 @@ STORIES.forEach((storyData) => {
   controls.className = 'controls';
   controls.innerHTML = `
     <button class="seekBtn backBtn" aria-label="Назад на 15 секунд">
+      <span>-15 сек</span>
       <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
         <path d="M4 12a8 8 0 1 1 3 6.2"/>
         <path d="M4 6v6h6"/>
       </svg>
-      <span>-15 сек</span>
     </button>
     <button class="seekBtn fwdBtn" aria-label="Вперёд на 15 секунд">
+      <span>+15 сек</span>
       <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" style="transform:scaleX(-1);">
         <path d="M4 12a8 8 0 1 1 3 6.2"/>
         <path d="M4 6v6h6"/>
       </svg>
-      <span>+15 сек</span>
     </button>
   `;
 
