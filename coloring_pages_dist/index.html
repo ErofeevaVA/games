@@ -37,6 +37,18 @@
     margin:0 auto 26px;
     line-height:1.4;
   }
+  #telegramHint{
+    display:none;
+    background:rgba(223,204,164,.15);
+    border:1px solid rgba(223,204,164,.4);
+    border-radius:14px;
+    padding:12px 16px;
+    margin:0 auto 26px;
+    max-width:480px;
+    font-size:14px;
+    text-align:center;
+    line-height:1.5;
+  }
   #grid{
     display:grid;
     grid-template-columns:repeat(auto-fill, minmax(150px, 1fr));
@@ -240,6 +252,12 @@
 <body>
 <div id="page">
   <h1>Выбери рисунок, который хочешь раскрасить. Нажми на него и сохрани на устройстве. Попроси взрослого его распечатать.</h1>
+
+  <div id="telegramHint">
+    📱 Вы открыли страницу в Telegram — тут скачивание может не работать.<br>
+    Нажмите на «⋯» (три точки) вверху или в углу экрана и выберите <b>«Открыть в браузере»</b> — там всё скачается без проблем.
+  </div>
+
   <div id="grid"></div>
 
   <hr id="divider">
@@ -281,6 +299,16 @@
 </div>
 
 <script>
+function isTelegramInApp(){
+  return /Telegram/i.test(navigator.userAgent) ||
+         !!window.TelegramWebviewProxy ||
+         !!window.TelegramWebviewProxyProto;
+}
+
+if(isTelegramInApp()){
+  document.getElementById('telegramHint').style.display = 'block';
+}
+
 const TOTAL = 10;
 const grid = document.getElementById('grid');
 const overlay = document.getElementById('overlay');
@@ -310,6 +338,7 @@ function openOverlay(i){
   currentName = `raskraska-${i}.jpg`;
   overlayImg.src = currentSrc;
   downloadedNote.textContent = '';
+  downloadedNote.className = '';
   overlay.classList.add('show');
 }
 
@@ -323,8 +352,16 @@ overlay.addEventListener('click', (e) => {
 });
 
 downloadBtn.addEventListener('click', async () => {
+  if(isTelegramInApp()){
+    downloadedNote.textContent = 'В Telegram скачивание может не работать — откройте страницу через «⋯» → «Открыть в браузере».';
+    downloadedNote.className = 'error';
+  }
+
   try{
-    downloadedNote.textContent = 'Готовим файл...';
+    if(!isTelegramInApp()){
+      downloadedNote.textContent = 'Готовим файл...';
+      downloadedNote.className = '';
+    }
     const resp = await fetch(currentSrc);
     const blob = await resp.blob();
     const file = new File([blob], currentName, { type: blob.type });
@@ -333,6 +370,7 @@ downloadBtn.addEventListener('click', async () => {
     if(navigator.canShare && navigator.canShare({ files: [file] })){
       await navigator.share({ files: [file], title: 'Раскраска' });
       downloadedNote.textContent = 'Готово! ✅';
+      downloadedNote.className = 'success';
       return;
     }
 
@@ -346,10 +384,12 @@ downloadBtn.addEventListener('click', async () => {
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
     downloadedNote.textContent = 'Сохранено! ✅';
+    downloadedNote.className = 'success';
   }catch(e){
     if(e && e.name === 'AbortError'){
       // пользователь сам закрыл окно "Поделиться" — не ошибка
       downloadedNote.textContent = '';
+      downloadedNote.className = '';
       return;
     }
     // запасной вариант, если fetch/share не сработали
@@ -360,7 +400,10 @@ downloadBtn.addEventListener('click', async () => {
     document.body.appendChild(a);
     a.click();
     a.remove();
-    downloadedNote.textContent = 'Открыли картинку — сохраните её вручную (долгий тап → «Сохранить изображение»).';
+    if(!isTelegramInApp()){
+      downloadedNote.textContent = 'Открыли картинку — сохраните её вручную (долгий тап → «Сохранить изображение»).';
+      downloadedNote.className = '';
+    }
   }
 });
 
