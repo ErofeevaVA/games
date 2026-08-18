@@ -299,6 +299,10 @@
 </div>
 
 <script>
+// Полностью отключаем контекстное меню на странице — иначе через "Открыть фрейм
+// в новой вкладке" или "Копировать адрес картинки" виден технический адрес файлов.
+document.addEventListener('contextmenu', (e) => e.preventDefault());
+
 function isMobileDevice(){
   return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 }
