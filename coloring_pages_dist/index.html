@@ -354,7 +354,7 @@ for(let i=1; i<=TOTAL; i++){
   card.className = 'card';
   const canvas = document.createElement('canvas');
   canvas.className = 'cardCanvas';
-  canvas.dataset.src = `assets/${i}.jpg`;
+  canvas.dataset.src = `assets/thumbs/${i}.jpg`;
   canvas.setAttribute('aria-label', `Раскраска ${i}`);
   card.appendChild(canvas);
   card.addEventListener('click', () => openOverlay(i));
