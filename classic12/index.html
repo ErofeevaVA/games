@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Разложи предметы по местам</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#131313;--accent:#DFCCA4;--red:#ef6461}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;font-family:'Manrope','Trebuchet MS','Segoe UI',sans-serif;background:#131313;color:#fff;overscroll-behavior:none}
+body{min-height:100dvh}
+#game{width:min(1180px,100%);min-height:100dvh;margin:auto;padding:18px clamp(10px,2vw,24px) 26px;display:flex;flex-direction:column;align-items:center}
+h1{font-size:clamp(22px,3vw,34px);margin:4px 0 4px;text-align:center;color:var(--accent)}
+.subtitle{font-size:clamp(14px,1.7vw,18px);margin:0 0 14px;text-align:center;font-weight:700}
+.locations{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.location{background:#1d1d1d;border:2px solid #343434;border-radius:22px;padding:8px}
+.location h2{margin:2px 0 8px;text-align:center;font-size:clamp(18px,2.2vw,26px)}
+.scene{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:15px;display:block}
+.slots{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-top:9px}
+.slot{aspect-ratio:1;border:3px dashed #DFCCA4;border-radius:14px;background:#202020;display:flex;align-items:center;justify-content:center;transition:.18s;overflow:hidden}
+.slot.over{transform:scale(1.05);border-color:var(--accent);background:#302b22}
+.slot.wrong{animation:shake .35s;background:#ffe0df;border-color:var(--red)}
+.slot img{max-width:92%;max-height:92%;object-fit:contain;pointer-events:none}
+@keyframes shake{25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-4px)}}
+.trayTitle{font-weight:800;margin:18px 0 8px;font-size:clamp(16px,2vw,21px)}
+.tray{width:100%;min-height:118px;background:#1d1d1d;border:2px solid #343434;border-radius:22px;padding:10px;display:grid;grid-template-columns:repeat(10,1fr);gap:7px}
+.item{aspect-ratio:1;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none;user-select:none;position:relative;border-radius:14px;transition:transform .12s,opacity .12s}
+.item:hover{transform:scale(1.06)}
+.item img{max-width:96%;max-height:96%;object-fit:contain;pointer-events:none;filter:drop-shadow(0 4px 3px #0003)}
+.item.dragging{opacity:.18}
+.dragGhost{position:fixed;z-index:999999;pointer-events:none;width:100px;height:100px;display:flex;align-items:center;justify-content:center;transform:translate(-50%,-50%) scale(1.08)}
+.dragGhost img{max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 5px 5px #0004)}
+.actions{margin-top:18px;display:flex;justify-content:center}
+#doneBtn,.nextBtn{border:0;border-radius:999px;padding:15px 34px;font-size:20px;font-weight:800;cursor:pointer;background:#DFCCA4;color:#131313}
+#doneBtn:disabled{background:#5b5549;color:#8e8779;cursor:not-allowed}
+.modal{position:fixed;inset:0;background:#0008;display:none;align-items:center;justify-content:center;z-index:99999;padding:20px}
+.modal.show{display:flex}
+.modalBox{background:#1d1d1d;border:2px solid #343434;border-radius:28px;padding:28px;text-align:center;max-width:520px}
+.modalBox .star{font-size:56px}
+.modalBox h2{font-size:clamp(28px,5vw,42px);margin:5px 0;color:#DFCCA4}
+.modalBox p{font-size:20px;font-weight:700;line-height:1.35}
+.note{font-size:14px;margin-top:8px;color:#aaa;text-align:center}
+@media(max-width:760px){
+ #game{min-height:100dvh;padding:44px 6px 8px}
+ h1{font-size:clamp(19px,5.2vw,25px);margin:4px 0 5px}
+ .subtitle{font-size:clamp(11px,3.2vw,14px);line-height:1.3;margin:0 10px 12px}
+ .locations{gap:6px}
+ .location{border-width:1px;border-radius:12px;padding:4px}
+ .location h2{font-size:clamp(13px,4vw,16px);margin:0 0 3px}
+ .scene{aspect-ratio:16/8;border-radius:8px}
+ .slots{grid-template-columns:repeat(6,1fr);gap:4px;margin-top:4px}
+ .slot{grid-column:span 2;aspect-ratio:1;border-width:2px;border-radius:8px}
+ .slot:nth-child(4){grid-column:2 / span 2}
+ .slot:nth-child(5){grid-column:4 / span 2}
+ .trayTitle{font-size:14px;margin:6px 0 3px}
+ .tray{grid-template-columns:repeat(5,1fr);min-height:0;border-width:1px;border-radius:12px;padding:4px;gap:2px}
+ .item{border-radius:8px}
+ .actions{margin-top:6px}
+ #doneBtn,.nextBtn{font-size:15px;padding:9px 24px}
+ .note{font-size:11px;margin-top:3px}
+}
+@media(max-width:760px) and (max-height:700px){
+ #game{padding-top:40px}
+ h1{font-size:18px}
+ .subtitle{font-size:11px;margin:0 10px 8px}
+ .scene{aspect-ratio:16/7}
+ .location h2{font-size:13px}
+ .slots{gap:3px;margin-top:3px}
+ .trayTitle{margin:4px 0 2px}
+ .tray{padding:3px}
+ .actions{margin-top:4px}
+ #doneBtn,.nextBtn{font-size:14px;padding:7px 22px}
+}
+</style>
+</head>
+<body>
+<div id="game">
+ <h1 id="levelTitle">Уровень 1</h1>
+ <p class="subtitle">Перетащи каждый предмет к месту, где он встречается</p>
+ <div class="locations" id="locations"></div>
+ <div class="trayTitle">Предметы</div>
+ <div class="tray" id="tray"></div>
+ <div class="actions"><button id="doneBtn" disabled>🔒 ГОТОВО!</button></div>
+ <div class="note" id="note"></div>
+</div>
+<div class="modal" id="modal"><div class="modalBox">
+ <div class="star">⭐</div><h2 id="modalTitle">МОЛОДЕЦ!</h2>
+ <p id="modalText"></p><button class="nextBtn" id="nextBtn">Играть дальше</button>
+</div></div>
+<script>
+const A='assets/';
+const levels=[
+ {locations:[
+   {id:'river',title:'РЕКА',image:A+'river.jpg'},
+   {id:'forest',title:'ЛЕС',image:A+'forest.jpg'}
+ ],items:[
+   ['sandcastle','river'],['hat','river'],['float','river'],['oars','river'],['shells','river'],
+   ['scarf','forest'],['rowan','forest'],['acorns','forest'],['mushrooms','forest'],['umbrella','forest']
+ ]},
+ {locations:[
+   {id:'garden',title:'ОГОРОД',image:A+'garden.jpg'},
+   {id:'farm',title:'ФЕРМА',image:A+'farm.jpg'}
+ ],items:[
+   ['grain','farm'],['milk','farm'],['eggs','farm'],['chick','farm'],['saddle','farm']
+ ]}
+];
+const fileMap={
+ sandcastle:'river-sandcastle.png',hat:'river-hat.png',float:'river-float.png',oars:'river-oars.png',shells:'river-shells.png',
+ scarf:'forest-scarf.png',rowan:'forest-rowan.png',acorns:'forest-acorns.png',mushrooms:'forest-mushrooms.png',umbrella:'forest-umbrella.png',
+ grain:'farm-grain.png',milk:'farm-milk.png',eggs:'farm-eggs.png',chick:'farm-chick.png',saddle:'farm-saddle.png'
+};
+let level=0, placed=0, dragging=null, ghost=null, startParent=null, startNext=null;
+const locEl=document.getElementById('locations'),tray=document.getElementById('tray'),done=document.getElementById('doneBtn'),note=document.getElementById('note');
+function shuffle(a){for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function render(){
+ placed=0;done.disabled=true;done.textContent='🔒 ГОТОВО!';locEl.innerHTML='';tray.innerHTML='';
+ document.getElementById('levelTitle').textContent='Уровень '+(level+1);
+ const L=levels[level];
+ L.locations.forEach(l=>{
+  const box=document.createElement('section');box.className='location';
+  box.innerHTML=`<h2>${l.title}</h2><img class="scene" src="${l.image}" alt="${l.title}"><div class="slots"></div>`;
+  const slots=box.querySelector('.slots');
+  for(let i=0;i<5;i++){let s=document.createElement('div');s.className='slot';s.dataset.location=l.id;slots.appendChild(s)}
+  locEl.appendChild(box);
+ });
+ shuffle([...L.items]).forEach(([name,where])=>{
+   const it=document.createElement('div');it.className='item';it.dataset.name=name;it.dataset.where=where;
+   it.innerHTML=`<img src="${A+fileMap[name]}" alt="">`;tray.appendChild(it);bindDrag(it);
+ });
+ if(level===1){
+   note.textContent='Для уровня 2 загружены 5 предметов фермы. Добавьте 5 предметов огорода — код уже готов для их подключения.';
+ } else note.textContent='';
+}
+function bindDrag(el){
+ el.addEventListener('pointerdown',e=>{
+  if(el.closest('.slot')) return;
+  e.preventDefault();
+  // На всякий случай полностью завершаем предыдущий drag.
+  if(dragging) cancelDrag();
+  dragging=el;startParent=el.parentNode;startNext=el.nextSibling;
+  el.classList.add('dragging');
+  ghost?.remove();
+  ghost=document.createElement('div');ghost.className='dragGhost';ghost.innerHTML=el.innerHTML;
+  document.body.appendChild(ghost);moveGhost(e);
+ });
+}
+function moveGhost(e){if(ghost){ghost.style.left=e.clientX+'px';ghost.style.top=e.clientY+'px'}}
+function targetSlot(e){
+ if(!ghost)return null;
+ ghost.style.visibility='hidden';
+ let t=document.elementFromPoint(e.clientX,e.clientY);
+ ghost.style.visibility='visible';
+ return t?.closest('.slot');
+}
+function highlight(e){
+ document.querySelectorAll('.slot.over').forEach(x=>x.classList.remove('over'));
+ let s=targetSlot(e);if(s&&!s.children.length)s.classList.add('over');
+}
+function drop(e){
+ if(!dragging)return;
+ const current=dragging;
+ let s=targetSlot(e);
+ document.querySelectorAll('.slot.over').forEach(x=>x.classList.remove('over'));
+ // Сначала убираем плавающую копию и состояние перетаскивания.
+ // Это исключает визуальные дубликаты при переносе элемента в слот.
+ ghost?.remove();ghost=null;
+ current.classList.remove('dragging');
+ if(s&&!s.children.length&&s.dataset.location===current.dataset.where){
+   s.appendChild(current);current.style.cursor='default';placed++;
+   if(placed===levels[level].items.length){done.disabled=false;done.textContent='🔓 ГОТОВО!'}
+ }else if(s){
+   s.classList.add('wrong');setTimeout(()=>s.classList.remove('wrong'),400);
+ }
+ dragging=null;startParent=null;startNext=null;
+}
+function cancelDrag(){
+ document.querySelectorAll('.slot.over').forEach(x=>x.classList.remove('over'));
+ if(dragging)dragging.classList.remove('dragging');
+ finishDrag();
+}
+function finishDrag(){
+ ghost?.remove();ghost=null;dragging=null;startParent=null;startNext=null;
+ // Страховочная очистка: в DOM никогда не должно оставаться dragGhost.
+ document.querySelectorAll('.dragGhost').forEach(x=>x.remove());
+ document.querySelectorAll('.item.dragging').forEach(x=>x.classList.remove('dragging'));
+}
+// Pointer events слушаем на window, а не только на исходном элементе.
+// Поэтому отпускание мыши за пределами предмета/iframe не оставляет "залипшую" копию.
+window.addEventListener('pointermove',e=>{if(dragging){e.preventDefault();moveGhost(e);highlight(e)}},{passive:false});
+window.addEventListener('pointerup',e=>{if(dragging){e.preventDefault();drop(e)}},{passive:false});
+window.addEventListener('pointercancel',cancelDrag);
+window.addEventListener('blur',cancelDrag);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelDrag()});
+done.onclick=()=>{
+ if(done.disabled)return;
+ document.getElementById('modal').classList.add('show');
+ if(level===0){
+   document.getElementById('modalTitle').textContent='МОЛОДЕЦ!';
+   document.getElementById('modalText').textContent='Все предметы на своих местах!';
+   document.getElementById('nextBtn').textContent='Играть дальше';
+ }else{
+   document.getElementById('modalTitle').textContent='МОЛОДЕЦ!';
+   document.getElementById('modalText').textContent='Все задания выполнены верно!';
+   document.getElementById('nextBtn').textContent='Играть ещё раз';
+ }
+};
+document.getElementById('nextBtn').onclick=()=>{
+ document.getElementById('modal').classList.remove('show');
+ if(level===0){level=1;render()}else{level=0;render()}
+};
+render();
+</script>
+</body>
+</html>
