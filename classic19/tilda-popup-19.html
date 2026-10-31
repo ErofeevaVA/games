@@ -1,0 +1,72 @@
+<div id="marker-19" style="width:1px;height:1px;"></div>
+<script>
+(function(){
+  var marker=document.getElementById('marker-19');
+  if(!marker||marker.dataset.ready19==='1')return;
+  marker.dataset.ready19='1';
+  var popupEl=marker.closest('.t-popup');
+  if(!popupEl)return;
+  var overlay=null,wasVisible=false,closing=false;
+  var rememberedY=window.scrollY||0,clickY=rememberedY,clickAt=0,savedY=rememberedY;
+  var htmlOverflow='',bodyOverflow='';
+  function open(){return popupEl.classList.contains('t-popup_show')&&getComputedStyle(popupEl).display!=='none'}
+  document.addEventListener('pointerdown',function(){
+    if(!open()&&!overlay&&!closing){clickY=window.scrollY||0;clickAt=Date.now()}
+  },true);
+  document.addEventListener('keydown',function(e){
+    if((e.key==='Enter'||e.key===' ')&&!open()&&!overlay){clickY=window.scrollY||0;clickAt=Date.now()}
+  },true);
+  window.addEventListener('scroll',function(){
+    if(!open()&&!overlay&&!closing)rememberedY=window.scrollY||0;
+  },{passive:true});
+  function restore(){
+    var html=document.documentElement,old=html.style.scrollBehavior;
+    html.style.scrollBehavior='auto';window.scrollTo(0,savedY);html.style.scrollBehavior=old;
+  }
+  function restoreLater(){
+    restore();requestAnimationFrame(restore);
+    [80,220,450,800,1200].forEach(function(ms){setTimeout(function(){if(!open())restore()},ms)})
+  }
+  function show(){
+    if(overlay||closing)return;
+    savedY=(Date.now()-clickAt<2500)?clickY:rememberedY;
+    htmlOverflow=document.documentElement.style.overflow;
+    bodyOverflow=document.body.style.overflow;
+    document.documentElement.style.overflow='hidden';
+    document.body.style.overflow='hidden';
+    overlay=document.createElement('div');overlay.id='game-wrap-19';
+    overlay.style.cssText='position:fixed;inset:0;width:100%;height:100vh;height:100dvh;z-index:2147483647;background:#131313;';
+    var frame=document.createElement('iframe');
+    frame.src='https://erofeevava.github.io/games/classic19/index.html';
+    frame.title='Классик 19 — Сказка о маленьком Ёжике';
+    frame.allowFullscreen=true;
+    frame.style.cssText='position:absolute;inset:0;width:100%;height:100%;border:0;';
+    var btn=document.createElement('button');btn.type='button';btn.textContent='✕';
+    btn.setAttribute('aria-label','Закрыть классик 19');
+    btn.style.cssText='position:absolute;top:calc(16px + env(safe-area-inset-top,0px));right:calc(20px + env(safe-area-inset-right,0px));z-index:2;border:0;background:transparent;color:#fff;font-size:28px;cursor:pointer;width:44px;height:44px;display:flex;align-items:center;justify-content:center;';
+    btn.onclick=closeEverything;
+    overlay.append(frame,btn);document.body.appendChild(overlay);
+  }
+  function hide(){
+    if(!overlay)return;
+    overlay.remove();overlay=null;
+    document.documentElement.style.overflow=htmlOverflow;
+    document.body.style.overflow=bodyOverflow;
+  }
+  function closeEverything(){
+    if(closing)return;closing=true;
+    hide();
+    var btn=popupEl.querySelector('.t-popup__close-wrapper, .t-popup__close');
+    if(btn)btn.click();
+    restoreLater();
+    setTimeout(function(){closing=false;wasVisible=open();rememberedY=savedY},1300);
+  }
+  setInterval(function(){
+    if(closing)return;
+    var v=open();
+    if(v&&!wasVisible)show();
+    else if(!v&&wasVisible){hide();restoreLater()}
+    wasVisible=v;
+  },250);
+})();
+</script>
