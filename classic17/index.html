@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#131313">
+<title>Жизненный цикл живой природы</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#131313; --panel:#202020; --accent:#DFCCA4; --muted:#d1d1d1; }
+  *{ box-sizing:border-box; }
+  html{ background:var(--bg); }
+  body{ margin:0; background:var(--bg); color:#fff; font-family:Manrope,Arial,sans-serif; min-height:100dvh; }
+  body.lightbox-open{ overflow:hidden; }
+  .page{ max-width:1240px; padding:clamp(72px,11vh,108px) 22px 55px; margin:0 auto; text-align:center; }
+  h1{ font-size:clamp(26px,3.2vw,43px); color:var(--accent); font-weight:800; line-height:1.2; margin:0 0 16px; }
+  .description{ color:#f0f0f0; font-size:clamp(14px,1.55vw,19px); max-width:850px; line-height:1.65; margin:0 auto 28px; white-space:pre-line; }
+  .gallery{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:15px; }
+  .tile{ color:inherit; font:inherit; background:var(--panel); border:1px solid #3c3c3c; border-radius:15px; padding:8px; overflow:hidden; cursor:zoom-in; position:relative; transition:border-color .15s,transform .15s; min-width:0; }
+  .tile:hover,.tile:focus-visible{ border-color:var(--accent); transform:translateY(-2px); outline:none; }
+  .tile img{ display:block; width:100%; height:clamp(150px,18vw,230px); object-fit:contain; border-radius:10px; background:#272727; }
+  .tile .magnifier{ position:absolute; right:15px; bottom:15px; display:grid; place-items:center; width:34px; height:34px; border-radius:50%; color:#151515; background:var(--accent); font-size:19px; }
+  .caption{ display:block; padding:8px 4px 3px; font-size:14px; font-weight:700; }
+  .lightbox{ position:fixed; inset:0; width:100%; height:100%; height:100dvh; z-index:10000; display:none; background:rgba(8,8,8,.985); padding:74px 16px 76px; }
+  .lightbox.open{ display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .lightbox img{ max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; user-select:none; -webkit-user-drag:none; }
+  .lb-close,.lb-nav{ border:0; display:grid; place-items:center; cursor:pointer; color:#fff; background:#2d2d2d; font:inherit; touch-action:manipulation; }
+  .lb-close{ position:absolute; top:calc(13px + env(safe-area-inset-top,0px)); right:calc(16px + env(safe-area-inset-right,0px)); z-index:3; width:46px; height:46px; border-radius:50%; font-size:29px; }
+  .lb-close:hover,.lb-nav:hover{ background:#4c4436; }
+  .lb-nav{ position:absolute; top:50%; transform:translateY(-50%); border-radius:50%; width:44px; height:44px; font-size:30px; z-index:2; }
+  .lb-prev{ left:14px; }.lb-next{ right:14px; }
+  .lb-counter{ position:absolute; bottom:calc(18px + env(safe-area-inset-bottom,0px)); left:0; right:0; text-align:center; color:var(--accent); font-size:15px; font-weight:700; }
+  .lb-image-wrap{ display:flex; align-items:center; justify-content:center; width:100%; height:100%; min-height:0; touch-action:pan-y; }
+  @media(max-width:950px){ .gallery{grid-template-columns:repeat(3,minmax(0,1fr));} }
+  @media(max-width:650px){
+    .page{padding:76px 11px 28px;}
+    .description{margin-bottom:18px;}
+    .gallery{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+    .tile{padding:5px;border-radius:10px;}
+    .tile img{height:clamp(120px,34vw,190px);border-radius:7px;}
+    .caption{font-size:12px;}
+    .tile .magnifier{width:28px;height:28px;right:10px;bottom:33px;font-size:16px;}
+    .lightbox{padding:70px 6px 75px;}
+    .lb-nav{top:auto;bottom:calc(11px + env(safe-area-inset-bottom,0px));transform:none;width:40px;height:40px;}
+    .lb-counter{bottom:calc(22px + env(safe-area-inset-bottom,0px));}
+  }
+
+  /* Лупа и масштабирование фотографии */
+  .lb-image-wrap{overflow:hidden;position:relative;cursor:zoom-in;touch-action:none}
+  .lb-image-wrap.zoomed{cursor:grab}
+  .lb-image-wrap.zoomed.panning{cursor:grabbing}
+  .lb-image-wrap img{transform-origin:center center;will-change:transform;transition:transform .12s ease-out;pointer-events:none}
+  .lb-image-wrap.panning img{transition:none}
+  .zoom-controls{position:absolute;z-index:4;bottom:calc(17px + env(safe-area-inset-bottom,0px));right:calc(18px + env(safe-area-inset-right,0px));display:flex;gap:9px}
+  .zoom-btn{border:1px solid #525252;background:#2d2d2d;color:#fff;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;cursor:pointer;touch-action:manipulation}
+  .zoom-btn:hover,.zoom-btn:focus-visible{background:#4c4436;border-color:var(--accent)}
+  .zoom-btn:disabled{opacity:.45;cursor:not-allowed}
+  .zoom-btn svg{width:22px;height:22px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  @media(max-width:650px){.zoom-controls{bottom:calc(70px + env(safe-area-inset-bottom,0px));right:9px;gap:7px}.zoom-btn{width:42px;height:42px}}
+  @media(prefers-reduced-motion:reduce){.tile{transition:none;}}
+</style>
+</head>
+<body>
+<main class="page">
+  <h1 id="gallery-title"></h1>
+  <p class="description" id="gallery-description"></p>
+  <div class="gallery" id="gallery"></div>
+</main>
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Просмотр увеличенного изображения" aria-hidden="true">
+  <button class="lb-close" id="close-lightbox" aria-label="Закрыть увеличенное изображение">&#215;</button>
+  <button class="lb-nav lb-prev" id="prev" aria-label="Предыдущее изображение">&#8249;</button>
+  <div class="lb-image-wrap" id="image-wrap"><img id="full-image" alt=""></div>
+  <button class="lb-nav lb-next" id="next" aria-label="Следующее изображение">&#8250;</button>
+  <div class="zoom-controls" aria-label="Масштаб изображения">
+    <button class="zoom-btn" id="zoom-out" type="button" aria-label="Уменьшить изображение" title="Уменьшить">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M16 16l5 5M7.5 10.5h6"/></svg>
+    </button>
+    <button class="zoom-btn" id="zoom-in" type="button" aria-label="Увеличить изображение (лупа)" title="Увеличить">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M16 16l5 5M10.5 7.5v6M7.5 10.5h6"/></svg>
+    </button>
+  </div>
+  <div class="lb-counter" id="counter"></div>
+</div>
+<script>
+'use strict';
+// Галерея классика 17: семь образовательных иллюстраций.
+const CONTENT = {
+  title: 'Жизненный цикл живой природы',
+  description: 'Изучай серию образовательных иллюстраций о живой природе',
+  images: [
+    {src:'images/01.jpg',alt:'Жизненный цикл: Бабочка'},
+    {src:'images/02.jpg',alt:'Жизненный цикл: Божья коровка'},
+    {src:'images/03.jpg',alt:'Жизненный цикл: Морской конёк'},
+    {src:'images/04.jpg',alt:'Жизненный цикл: Муравей'},
+    {src:'images/05.jpg',alt:'Жизненный цикл: Пчела'},
+    {src:'images/06.jpg',alt:'Жизненный цикл: Синий кит'},
+    {src:'images/07.jpg',alt:'Жизненный цикл: Фламинго'}
+  ]
+};
+
+const gallery=document.getElementById('gallery');
+const modal=document.getElementById('lightbox');
+const fullImage=document.getElementById('full-image');
+const counter=document.getElementById('counter');
+let current=0,returnFocus=null,touchX=null;
+document.getElementById('gallery-title').textContent=CONTENT.title;
+document.getElementById('gallery-description').textContent=CONTENT.description;
+CONTENT.images.forEach((item,i)=>{
+  const button=document.createElement('button');button.className='tile';button.type='button';button.setAttribute('aria-label','Увеличить изображение '+(i+1));
+  const image=document.createElement('img');image.src=item.src;image.alt=item.alt;image.loading='lazy';image.decoding='async';
+  const cap=document.createElement('span');cap.className='caption';cap.textContent=item.alt.replace('Жизненный цикл: ','');
+  const zoom=document.createElement('span');zoom.className='magnifier';zoom.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="10" cy="10" r="6"/><path d="M14.5 14.5L20 20M10 7v6M7 10h6"/></svg>';zoom.setAttribute('aria-hidden','true');
+  button.append(image,cap,zoom);button.addEventListener('click',()=>openLightbox(i));gallery.append(button);
+});
+function notifyParent(open){
+  if(window.parent!==window){window.parent.postMessage({type:'classic17:lightbox',open:open},'*');}
+}
+function renderImage(){resetZoom();const item=CONTENT.images[current];fullImage.src=item.src;fullImage.alt=item.alt;counter.textContent=(current+1)+' / '+CONTENT.images.length;}
+function openLightbox(i){returnFocus=document.activeElement;current=i;renderImage();modal.classList.add('open');modal.setAttribute('aria-hidden','false');document.body.classList.add('lightbox-open');document.getElementById('close-lightbox').focus();notifyParent(true);}
+function closeLightbox(){if(!modal.classList.contains('open'))return;resetZoom();modal.classList.remove('open');modal.setAttribute('aria-hidden','true');document.body.classList.remove('lightbox-open');fullImage.removeAttribute('src');notifyParent(false);if(returnFocus&&returnFocus.isConnected)returnFocus.focus();}
+function step(direction){current=(current+direction+CONTENT.images.length)%CONTENT.images.length;renderImage();}
+document.getElementById('close-lightbox').addEventListener('click',closeLightbox);
+document.getElementById('prev').addEventListener('click',()=>step(-1));
+document.getElementById('next').addEventListener('click',()=>step(1));
+modal.addEventListener('click',e=>{if(e.target===modal)closeLightbox()});
+document.addEventListener('keydown',e=>{
+  if(!modal.classList.contains('open'))return;
+  if(e.key==='Escape'){e.preventDefault();closeLightbox()}
+  else if(e.key==='ArrowLeft'){e.preventDefault();step(-1)}
+  else if(e.key==='ArrowRight'){e.preventDefault();step(1)}
+  else if(e.key==='Tab'){const els=[document.getElementById('close-lightbox'),document.getElementById('prev'),document.getElementById('next')];let i=els.indexOf(document.activeElement);e.preventDefault();els[(i+(e.shiftKey?-1:1)+els.length)%els.length].focus();}
+});
+const wrap=document.getElementById('image-wrap');
+let zoomLevel=1, panX=0, panY=0, pinchStart=0, pinchZoom=1;
+const activePointers=new Map();
+const imgZoomIn=document.getElementById('zoom-in');
+const imgZoomOut=document.getElementById('zoom-out');
+function clamp(n,lo,hi){return Math.min(hi,Math.max(lo,n));}
+function applyZoom(){
+  // Не даём утащить изображение полностью за пределы экрана.
+  const limitX=wrap.clientWidth*(zoomLevel-1)/2;
+  const limitY=wrap.clientHeight*(zoomLevel-1)/2;
+  panX=clamp(panX,-limitX,limitX); panY=clamp(panY,-limitY,limitY);
+  fullImage.style.transform=`translate(${panX}px, ${panY}px) scale(${zoomLevel})`;
+  wrap.classList.toggle('zoomed',zoomLevel>1);
+  imgZoomOut.disabled=zoomLevel<=1;
+  imgZoomIn.disabled=zoomLevel>=4;
+}
+function setZoom(next){
+  zoomLevel=clamp(Math.round(next*10)/10,1,4);
+  if(zoomLevel===1){panX=0;panY=0;}
+  applyZoom();
+}
+function resetZoom(){
+  zoomLevel=1;panX=0;panY=0;activePointers.clear();
+  if(wrap){wrap.classList.remove('panning');applyZoom();}
+}
+imgZoomIn.addEventListener('click',()=>setZoom(zoomLevel+0.5));
+imgZoomOut.addEventListener('click',()=>setZoom(zoomLevel-0.5));
+wrap.addEventListener('dblclick',()=>setZoom(zoomLevel===1?2:1));
+wrap.addEventListener('wheel',e=>{
+  if(!modal.classList.contains('open'))return;
+  e.preventDefault();setZoom(zoomLevel+(e.deltaY<0?0.25:-0.25));
+},{passive:false});
+let panPrev=null;
+wrap.addEventListener('pointerdown',e=>{
+  if(!modal.classList.contains('open'))return;
+  activePointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(zoomLevel>1){panPrev={x:e.clientX,y:e.clientY};wrap.classList.add('panning');}
+  if(activePointers.size===2){
+    const v=[...activePointers.values()];
+    pinchStart=Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y);pinchZoom=zoomLevel;
+  }
+  wrap.setPointerCapture(e.pointerId);
+});
+wrap.addEventListener('pointermove',e=>{
+  if(!activePointers.has(e.pointerId))return;
+  const prev=activePointers.get(e.pointerId);
+  activePointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(activePointers.size===2){
+    const v=[...activePointers.values()];
+    const distance=Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y);
+    if(pinchStart>0){setZoom(pinchZoom*distance/pinchStart);}
+  }else if(zoomLevel>1){
+    panX+=e.clientX-prev.x;panY+=e.clientY-prev.y;applyZoom();
+  }
+});
+function finishPointer(e){activePointers.delete(e.pointerId);if(!activePointers.size){wrap.classList.remove('panning');panPrev=null;pinchStart=0;}}
+wrap.addEventListener('pointerup',finishPointer);
+wrap.addEventListener('pointercancel',finishPointer);
+
+wrap.addEventListener('touchstart',e=>{touchX=e.touches.length===1?e.touches[0].clientX:null},{passive:true});
+wrap.addEventListener('touchend',e=>{if(touchX===null||!e.changedTouches.length)return;let dx=e.changedTouches[0].clientX-touchX;touchX=null;if(zoomLevel===1&&Math.abs(dx)>55)step(dx>0?-1:1)},{passive:true});
+</script>
+</body>
+</html>
