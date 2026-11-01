@@ -1,15 +1,463 @@
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Тайное слово — классик 18</title><style>
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap');
-:root{--bg:#131313;--card:#242424;--accent:#DFCCA4;--line:#424242}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#fff;font-family:Manrope,Arial,sans-serif}main{max-width:1000px;margin:auto;padding:72px 16px 28px}h1{font-size:clamp(26px,4vw,43px);color:var(--accent);text-align:center;margin:0 0 9px}p.sub{text-align:center;color:#e0e0e0;margin:0 0 25px;font-size:15px}.section-label{margin:21px 0 11px;text-align:center;font-weight:800;color:var(--accent)}button{font:inherit;cursor:pointer;touch-action:manipulation}.difficulties{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}.btn{border:1px solid #555;background:#242424;color:#fff;padding:10px 19px;border-radius:12px;font-weight:700}.btn.active,.btn.primary{background:var(--accent);border-color:var(--accent);color:#131313}.cats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.cat{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;min-height:130px;border:1px solid #444;border-radius:16px;background:#242424;color:#fff;font-weight:700;padding:10px}.cat .emoji{font-size:39px}.cat:active,.btn:active{transform:scale(.98)}.top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:15px}.top .btn{font-size:13px;padding:9px 12px}.pill{background:#242424;padding:9px 12px;border-radius:14px;font-weight:700;font-size:13px}.mystery{width:min(240px,46vw);height:130px;background:#242424;border:1px solid var(--line);border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:15px auto;color:var(--accent);font-weight:800}.question{font-size:63px;line-height:1}.hint{text-align:center;margin:12px}.word{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;margin:25px 0}.letter{width:clamp(25px,6vw,45px);height:clamp(36px,7vw,53px);border-bottom:3px solid var(--accent);display:grid;place-items:center;font-size:clamp(18px,4vw,26px);font-weight:800}.keyboard{display:flex;flex-wrap:wrap;gap:7px;max-width:680px;margin:0 auto;justify-content:center}.key{min-width:clamp(32px,7vw,47px);height:45px;border-radius:10px;background:#333;color:#fff;border:1px solid #666;font-size:18px;font-weight:800}.key.correct{background:#395c43;border-color:#5b9c73}.key.wrong{background:#473030;border-color:#6b4949;opacity:.5}.key:disabled{cursor:default}.win{position:fixed;inset:0;z-index:20;background:#000d;display:flex;align-items:center;justify-content:center;padding:18px;overflow-y:auto}.win-card{max-width:430px;width:100%;background:#252525;border:1px solid var(--accent);padding:22px;border-radius:20px;text-align:center}.win-card h2{color:var(--accent);margin:0}.win img{display:block;object-fit:contain;max-width:100%;width:min(280px,65vw);height:min(280px,36dvh);margin:12px auto;border-radius:12px}.win .btn{display:block;width:100%;margin-top:10px}.word-name{font-size:22px;color:var(--accent);font-weight:800}.muted{font-size:12px;color:#a5a5a5;text-align:center;margin-top:22px}
-@media(max-width:650px){main{padding:76px 10px 25px}.cats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.cat{min-height:105px}.cat .emoji{font-size:32px}.top{gap:4px}.pill{font-size:11px;padding:8px}.mystery{height:100px}.question{font-size:48px}.keyboard{gap:4px}.key{height:42px;font-size:16px}.word{margin:17px 0}}
-</style></head><body><main id="app"></main><script>
-let categories=[],difficulty='easy',phase='menu',category=null,entry=null,queues={},guessed=new Set(),wrong=new Set(),hinted=new Set(),hints=2,progress={n:0,total:0};const $=id=>document.getElementById(id),norm=c=>c==='Ё'?'Е':c,rand=a=>{a=[...a];for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a},alphabet='ЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮ'.split('');
-function menu(){phase='menu';$('app').innerHTML=`<h1>Тайное слово</h1><p class="sub">Угадывай буквы — открывай тайную картинку ✨</p><div class="section-label">Сложность</div><div class="difficulties">${[['easy','Легко'],['medium','Средне'],['hard','Сложно']].map(([d,t])=>`<button class="btn ${difficulty===d?'active':''}" data-difficulty="${d}">${t}</button>`).join('')}</div><div class="section-label">Выбери категорию</div><div class="cats">${categories.map(c=>`<button class="cat" data-cat="${c.id}"><span class="emoji">${c.emoji}</span>${c.name}</button>`).join('')}</div><div class="muted">8 категорий · 3 уровня сложности · для детей</div>`;document.querySelectorAll('[data-difficulty]').forEach(b=>b.onclick=()=>{difficulty=b.dataset.difficulty;menu()});document.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>start(categories.find(c=>c.id===b.dataset.cat)))}
-function start(cat){category=cat;let k=cat.id+':'+difficulty,q=queues[k];if(!q||q.pos>=q.words.length){let a=rand(cat.levels[difficulty]);if(q&&a.length>1&&a[0].word===q.words.at(-1).word)a.push(a.shift());q={words:a,pos:0};queues[k]=q}entry=q.words[q.pos++];progress={n:q.pos,total:q.words.length};guessed=new Set();wrong=new Set();hinted=new Set();hints=difficulty==='easy'?2:1;phase='playing';render()}
-function render(){if(!entry)return;let letters=entry.word.split(''),done=phase==='won';$('app').innerHTML=`<div class="top"><button class="btn" id="menu">← Меню</button><span class="pill">${category.emoji} ${category.name}</span><span class="pill">${progress.n} / ${progress.total}</span></div><div class="mystery"><span class="question">?</span><span>${letters.length} букв</span></div><div class="hint"><button class="btn" id="hint" ${hints===0||done?'disabled':''}>💡 Подсказка · Осталось: ${hints}</button></div><div class="word">${letters.map((c,i)=>`<div class="letter">${guessed.has(norm(c))||hinted.has(i)||done?c:''}</div>`).join('')}</div><div class="keyboard">${alphabet.map(c=>`<button class="key ${guessed.has(c)?'correct':wrong.has(c)?'wrong':''}" data-letter="${c}" ${guessed.has(c)||wrong.has(c)||done?'disabled':''}>${c}</button>`).join('')}</div>`;$('menu').onclick=menu;$('hint').onclick=useHint;document.querySelectorAll('[data-letter]').forEach(b=>b.onclick=()=>guess(b.dataset.letter));if(done)win()}
-function checkWin(){return entry.word.split('').every((c,i)=>guessed.has(norm(c))||hinted.has(i))}
-function guess(c){if(phase!=='playing'||guessed.has(c)||wrong.has(c))return;if(entry.word.split('').map(norm).includes(c))guessed.add(c);else wrong.add(c);if(checkWin()){phase='won'}render()}
-function useHint(){if(phase!=='playing'||hints<=0)return;const hidden=entry.word.split('').map((c,i)=>(guessed.has(norm(c))||hinted.has(i))?null:i).filter(i=>i!==null);if(!hidden.length)return;hinted.add(hidden[Math.floor(Math.random()*hidden.length)]);hints--;if(checkWin())phase='won';render()}
-function win(){const d=document.createElement('div');d.className='win';let safe=entry.word.replace(/[<>&"']/g,'');d.innerHTML=`<div class="win-card"><h2>Правильно! 🎉</h2><p>Молодец! Ты угадал слово!</p>${entry.image?`<img src="${entry.image}" alt="${safe}">`:'<div style="font-size:80px;padding:20px">🌟</div>'}<div class="word-name">${safe}</div><button class="btn primary" id="next">Следующее слово →</button><button class="btn" id="other">Выбрать другую категорию</button></div>`;document.body.append(d);$('next').onclick=()=>{d.remove();start(category)};$('other').onclick=()=>{d.remove();menu()}}
-window.addEventListener('keydown',e=>{if(phase==='playing'&&e.key.length===1&&/[А-ЯЁа-яё]/.test(e.key))guess(norm(e.key.toUpperCase()))});fetch('data.json').then(r=>{if(!r.ok)throw Error();return r.json()}).then(a=>{categories=a;menu()}).catch(()=>$('app').innerHTML='<h1>Не удалось загрузить игру</h1><p class="sub">Проверьте файл data.json.</p>');
-</script></body></html>
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Тайное слово — игра в слова для детей</title>
+  <!-- Использует текущие data.json и images/*.webp без переименования файлов -->
+  <meta name="description" content="Угадывай буквы и открывай тайную картинку. Спокойная игра для детей 4–12 лет." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg1:#fcf6ff;
+      --bg2:#eef7ff;
+      --bg3:#fff8ef;
+      --card:#ffffff;
+      --text:#4e3266;
+      --muted:#7b6a8f;
+      --primary:#bb6de5;
+      --primary-2:#d59bf4;
+      --primary-dark:#8b48b2;
+      --secondary:#f3e9fb;
+      --secondary-2:#e9f5ff;
+      --accent:#f7d787;
+      --accent-2:#ffc95a;
+      --mint:#b8f0db;
+      --mint-dark:#7ccdb2;
+      --border:#eddff5;
+      --danger:#df9eb0;
+      --shadow-soft:0 12px 35px rgba(187,109,229,.18);
+      --shadow-glow:0 0 40px rgba(213,155,244,.25);
+      --shadow-key:0 4px 0 rgba(139,72,178,.12), 0 6px 14px rgba(139,72,178,.15);
+      --r-xl:28px;
+      --r-lg:22px;
+      --r-md:16px;
+      --r-sm:12px;
+    }
+    *{box-sizing:border-box}
+    html,body{min-height:100%}
+    body{
+      margin:0;
+      font-family:'Nunito',system-ui,-apple-system,sans-serif;
+      color:var(--text);
+      background:linear-gradient(160deg,var(--bg1),var(--bg2) 45%,var(--bg3));
+    }
+    h1,h2,h3,.display,.btn,.chip,.letter,.word-cell{font-family:'Fredoka','Nunito',sans-serif;letter-spacing:-.01em}
+    button{font:inherit;cursor:pointer;border:none;background:none}
+    img{max-width:100%;display:block}
+    .page{min-height:100vh;max-width:1200px;margin:0 auto;padding:20px 16px 32px}
+    .hidden{display:none !important}
+    .menu{
+      display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px 0;
+    }
+    .hero-icon{width:70px;height:70px;border-radius:24px;background:#fff;display:grid;place-items:center;box-shadow:var(--shadow-glow);font-size:34px;animation:float 6s ease-in-out infinite}
+    h1{margin:14px 0 0;text-align:center;font-size:clamp(42px,7vw,78px);line-height:1.02;font-weight:700;background:linear-gradient(135deg,var(--primary),var(--primary-2) 60%,#ee9eb0);-webkit-background-clip:text;background-clip:text;color:transparent}
+    .subtitle{margin:12px 0 0;text-align:center;font-size:clamp(17px,2vw,22px);color:var(--muted)}
+    .section-title{margin:34px 0 12px;text-align:center;font-size:14px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+    .difficulty-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:min(100%,560px)}
+    .diff-btn{flex:1 1 150px;min-width:140px;padding:14px 16px;border-radius:18px;background:#fff;color:var(--muted);box-shadow:var(--shadow-soft);font-weight:700;transition:.2s transform,.2s background,.2s color}
+    .diff-btn:hover{transform:translateY(-2px)}
+    .diff-btn.active{background:var(--primary);color:#fff;transform:translateY(-2px)}
+    .cat-grid{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:8px}
+    @media(min-width:760px){.cat-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+    .cat-card{padding:20px;border-radius:26px;text-align:left;background:#fff;box-shadow:var(--shadow-soft);transition:.2s transform,.25s box-shadow}
+    .cat-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-glow)}
+    .cat-emoji{font-size:44px;line-height:1}
+    .cat-name{margin-top:12px;font-size:18px;font-weight:700;color:var(--text)}
+    .cat-count{margin-top:4px;font-size:13px;color:var(--muted)}
+    .footer-note{margin-top:28px;text-align:center;font-size:13px;color:var(--muted)}
+
+    .game-shell{display:flex;flex-direction:column;gap:18px;min-height:100vh;padding-top:8px}
+    .topbar{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center}
+    .chip,.top-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;border-radius:999px;background:#fff;box-shadow:var(--shadow-soft);font-weight:700;font-size:14px;color:var(--text)}
+    .top-btn{transition:.2s transform}
+    .top-btn:hover{transform:translateY(-2px)}
+    .chip.center{min-width:0;justify-content:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .mystery-card{position:relative;width:min(270px,60vw);aspect-ratio:4/3;margin:2px auto 0;border-radius:28px;overflow:hidden;background:#fff;box-shadow:var(--shadow-soft);display:flex;flex-direction:column;align-items:center;justify-content:center}
+    .mystery-card::before{content:'';position:absolute;inset:0;background:linear-gradient(160deg,rgba(233,214,248,.9),rgba(219,238,255,.75) 45%,rgba(255,241,217,.8))}
+    .mystery-q{position:relative;font-size:78px;font-weight:800;color:var(--primary);animation:float 6s ease-in-out infinite}
+    .mystery-small{position:relative;margin-top:6px;font-size:14px;font-weight:700;color:var(--muted)}
+    .hint-wrap{text-align:center}
+    .hint-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 22px;border-radius:999px;background:var(--accent);color:#6e5310;box-shadow:var(--shadow-soft);font-weight:700;transition:.2s transform,.2s opacity}
+    .hint-btn:hover{transform:translateY(-2px)}
+    .hint-btn:disabled{opacity:.58;cursor:not-allowed;background:#f3edf7;color:#9f90b0;transform:none}
+
+    .word-display{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+    .word-cell{display:flex;align-items:flex-end;justify-content:center;border-radius:14px;padding-bottom:4px;font-size:28px;font-weight:700;min-width:40px;height:54px;transition:.25s transform,.25s opacity,.25s background,.25s color}
+    .word-cell.hidden-cell{border-bottom:4px solid rgba(187,109,229,.35);border-radius:0;background:transparent;color:transparent}
+    .word-cell.revealed{background:#fff;color:var(--primary-dark);box-shadow:var(--shadow-soft);animation:pop .35s cubic-bezier(.34,1.56,.64,1)}
+    .keyboard{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px;max-width:880px;margin:0 auto}
+    @media(min-width:700px){.keyboard{grid-template-columns:repeat(11,minmax(0,1fr));gap:8px}.word-cell{min-width:48px;height:58px;font-size:32px}}
+    .letter{height:48px;border-radius:14px;background:#fff;color:var(--primary-dark);font-size:24px;font-weight:700;box-shadow:var(--shadow-key);transition:.18s transform,.18s background,.18s color,.18s opacity}
+    .letter:hover:not(:disabled){transform:translateY(-2px);background:var(--primary);color:#fff}
+    .letter:active:not(:disabled){transform:translateY(1px)}
+    .letter.correct{background:var(--mint);box-shadow:0 3px 0 var(--mint-dark);color:#34554a}
+    .letter.wrong{background:var(--secondary);color:#9a8bae;opacity:.55;box-shadow:none}
+    .letter:disabled{cursor:not-allowed}
+    .shake{animation:shake .45s ease-in-out}
+
+    .overlay{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(78,50,102,.18);backdrop-filter:blur(6px)}
+    .modal{position:relative;width:min(100%,520px);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:30px;padding:24px;box-shadow:var(--shadow-glow);text-align:center;animation:pop .35s cubic-bezier(.34,1.56,.64,1)}
+    .modal h2{margin:0;font-size:38px;font-weight:700;background:linear-gradient(135deg,var(--primary),var(--primary-2) 60%,#ee9eb0);-webkit-background-clip:text;background-clip:text;color:transparent}
+    .modal p{margin:6px 0 0;color:var(--muted);font-size:16px}
+    .win-image{width:min(100%,320px);aspect-ratio:1/1;margin:18px auto 0;border-radius:28px;overflow:hidden;background:#f7f2fb;border:1px solid var(--border);display:grid;place-items:center}
+    .win-image img{width:100%;height:100%;object-fit:cover;opacity:0;transform:scale(.92);transition:.7s ease-out}
+    .win-image img.loaded{opacity:1;transform:scale(1)}
+    .win-word{margin-top:16px;font-size:40px;font-weight:700;color:var(--primary-dark)}
+    .modal-actions{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+    .primary-btn,.secondary-btn{padding:15px 20px;border-radius:18px;font-weight:700;box-shadow:var(--shadow-soft);transition:.2s transform}
+    .primary-btn:hover,.secondary-btn:hover{transform:translateY(-2px)}
+    .primary-btn{background:var(--primary);color:#fff}
+    .secondary-btn{background:var(--secondary);color:var(--text)}
+
+    .confetti{pointer-events:none;position:fixed;inset:0;overflow:hidden;z-index:50}
+    .confetti-piece{position:absolute;top:-15px;border-radius:4px;opacity:1;animation:confetti var(--dur) ease-out forwards var(--delay);transform:translateY(-20px)}
+    .animate-up{animation:fadeUp .5s ease-out both}
+    .loading-placeholder{font-size:48px;animation:float 6s ease-in-out infinite}
+    @keyframes float{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-10px) rotate(2deg)}}
+    @keyframes pop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.15);opacity:1}100%{transform:scale(1);opacity:1}}
+    @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px) rotate(-3deg)}40%{transform:translateX(6px) rotate(3deg)}60%{transform:translateX(-4px) rotate(-2deg)}80%{transform:translateX(4px) rotate(2deg)}}
+    @keyframes confetti{0%{transform:translate(0,0) rotate(0deg);opacity:1}100%{transform:translate(var(--tx),var(--ty)) rotate(var(--rot));opacity:0}}
+    @keyframes fadeUp{0%{opacity:0;transform:translateY(16px)}100%{opacity:1;transform:translateY(0)}}
+    @media(max-width:520px){
+      .page{padding-left:12px;padding-right:12px}
+      .topbar{grid-template-columns:1fr 1fr;gap:8px}.topbar .chip.center{grid-column:1/-1;order:-1}
+      .chip,.top-btn{padding:11px 12px;font-size:13px}
+      .word-cell{min-width:34px;height:48px;font-size:24px}
+      .letter{font-size:21px;height:46px}
+      .cat-card{padding:16px}
+      .modal{padding:20px}
+      .modal h2{font-size:34px}
+      .win-word{font-size:34px}
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section id="menuScreen" class="menu">
+      <div class="hero-icon animate-up">✨</div>
+      <h1 class="animate-up" style="animation-delay:80ms">Тайное слово</h1>
+      <p class="subtitle animate-up" style="animation-delay:120ms">Угадывай буквы — открывай тайную картинку ✨</p>
+
+      <p class="section-title animate-up" style="animation-delay:180ms">Сложность</p>
+      <div class="difficulty-row animate-up" id="difficultyRow" style="animation-delay:220ms"></div>
+
+      <p class="section-title animate-up" style="animation-delay:260ms">Выбери категорию</p>
+      <div class="cat-grid" id="catGrid"></div>
+      <p class="footer-note animate-up" style="animation-delay:420ms">Сделано с любовью для детей 4–12 лет 💜</p>
+    </section>
+
+    <section id="gameScreen" class="game-shell hidden">
+      <div class="topbar">
+        <button class="top-btn" id="backBtn">← Меню</button>
+        <div class="chip center" id="categoryChip">🦁 Животные</div>
+        <div class="chip" id="progressChip">1 / 10</div>
+      </div>
+
+      <div class="mystery-card">
+        <div class="mystery-q">?</div>
+        <div class="mystery-small" id="lettersLabel">5 букв</div>
+      </div>
+
+      <div class="hint-wrap">
+        <button class="hint-btn" id="hintBtn">💡 Подсказка · Осталось: 2</button>
+      </div>
+
+      <div class="word-display" id="wordDisplay"></div>
+      <div class="keyboard" id="keyboard"></div>
+    </section>
+  </main>
+
+  <div id="confetti" class="confetti hidden"></div>
+  <div id="winOverlay" class="overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h2>Правильно! 🎉</h2>
+      <p>Молодец! Ты угадал слово! ✨</p>
+      <div class="win-image" id="winImageWrap"><div class="loading-placeholder">✨</div></div>
+      <div class="win-word" id="winWord"></div>
+      <div class="modal-actions">
+        <button class="primary-btn" id="nextBtn">Следующее слово →</button>
+        <button class="secondary-btn" id="menuBtn">Выбрать другую категорию</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const RUSSIAN_ALPHABET = ["Й","Ц","У","К","Е","Н","Г","Ш","Щ","З","Х","Ъ","Ф","Ы","В","А","П","Р","О","Л","Д","Ж","Э","Я","Ч","С","М","И","Т","Ь","Б","Ю"];
+    // Категории и адреса картинок берём из уже загруженного data.json.
+    // Никаких изменений в папке images не требуется.
+    let CATEGORIES = [];
+
+
+    const state = {
+      phase: 'menu',
+      difficulty: 'easy',
+      category: null,
+      entry: null,
+      progress: {n:0,total:0},
+      guessed: new Set(),
+      wrong: new Set(),
+      hinted: new Set(),
+      hintsLeft: 2,
+      shakeKey: null,
+      queues: new Map(),
+    };
+
+    const els = {
+      menuScreen: document.getElementById('menuScreen'),
+      gameScreen: document.getElementById('gameScreen'),
+      difficultyRow: document.getElementById('difficultyRow'),
+      catGrid: document.getElementById('catGrid'),
+      backBtn: document.getElementById('backBtn'),
+      categoryChip: document.getElementById('categoryChip'),
+      progressChip: document.getElementById('progressChip'),
+      lettersLabel: document.getElementById('lettersLabel'),
+      hintBtn: document.getElementById('hintBtn'),
+      wordDisplay: document.getElementById('wordDisplay'),
+      keyboard: document.getElementById('keyboard'),
+      winOverlay: document.getElementById('winOverlay'),
+      winImageWrap: document.getElementById('winImageWrap'),
+      winWord: document.getElementById('winWord'),
+      nextBtn: document.getElementById('nextBtn'),
+      menuBtn: document.getElementById('menuBtn'),
+      confetti: document.getElementById('confetti'),
+    };
+
+    function normLetter(c){ return c === 'Ё' ? 'Е' : c; }
+    function plural(n){ const m10=n%10,m100=n%100; if(m10===1&&m100!==11) return 'буква'; if(m10>=2&&m10<=4&&(m100<12||m100>14)) return 'буквы'; return 'букв'; }
+    function shuffle(arr){ const a=[...arr]; for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+    let audioCtx = null;
+    function getCtx(){
+      if (typeof window === 'undefined') return null;
+      if (!audioCtx) {
+        try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+        catch(e){ return null; }
+      }
+      return audioCtx;
+    }
+    function tone(freq, duration=.15, type='sine', gain=.08){
+      const c = getCtx(); if(!c) return; if(c.state !== 'running') c.resume();
+      const o = c.createOscillator(); const g = c.createGain();
+      o.type = type; o.frequency.value = freq;
+      g.gain.setValueAtTime(0, c.currentTime);
+      g.gain.linearRampToValueAtTime(gain, c.currentTime + .01);
+      g.gain.exponentialRampToValueAtTime(.0001, c.currentTime + duration);
+      o.connect(g).connect(c.destination); o.start(); o.stop(c.currentTime + duration + .02);
+    }
+    function unlockAudio(){
+      const c=getCtx(); if(!c) return;
+      try{ if(navigator.audioSession) navigator.audioSession.type='playback'; }catch(e){}
+      if(c.state !== 'running') c.resume();
+      try{ const b=c.createBuffer(1,1,22050); const s=c.createBufferSource(); s.buffer=b; s.connect(c.destination); s.start(0); }catch(e){}
+    }
+    ['pointerdown','touchstart','touchend','mousedown','keydown','click'].forEach(evt => {
+      window.addEventListener(evt, unlockAudio, {capture:true,passive:true});
+    });
+    const sfx = {
+      press(){ tone(520,.05,'sine',.03); },
+      correct(){ tone(660,.14,'sine',.06); setTimeout(()=>tone(880,.16,'sine',.06),90); },
+      wrong(){ tone(220,.18,'triangle',.05); },
+      win(){ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f,.22,'sine',.07), i*110)); }
+    };
+
+    function renderDifficulty(){
+      const options = [
+        {id:'easy',label:'Легко'}, {id:'medium',label:'Средне'}, {id:'hard',label:'Сложно'}
+      ];
+      els.difficultyRow.innerHTML='';
+      options.forEach((opt, idx) => {
+        const btn=document.createElement('button');
+        btn.className='diff-btn animate-up' + (state.difficulty===opt.id ? ' active' : '');
+        btn.style.animationDelay = (240 + idx*40) + 'ms';
+        btn.textContent=opt.label;
+        btn.onclick=()=>{ state.difficulty=opt.id; renderDifficulty(); };
+        els.difficultyRow.appendChild(btn);
+      });
+    }
+    function renderCategories(){
+      els.catGrid.innerHTML='';
+      CATEGORIES.forEach((cat,i)=>{
+        const btn=document.createElement('button');
+        btn.className='cat-card animate-up';
+        btn.style.animationDelay = (280 + i*35) + 'ms';
+        btn.innerHTML = `<div class="cat-emoji">${cat.emoji}</div><div class="cat-name">${cat.name}</div><div class="cat-count">45+ слов</div>`;
+        btn.onclick=()=> startCategory(cat, state.difficulty);
+        els.catGrid.appendChild(btn);
+      });
+    }
+    function showMenu(){
+      state.phase='menu';
+      els.menuScreen.classList.remove('hidden');
+      els.gameScreen.classList.add('hidden');
+      els.winOverlay.classList.add('hidden');
+      els.confetti.classList.add('hidden');
+    }
+    function startCategory(cat, diff){
+      state.category = cat;
+      state.difficulty = diff;
+      nextWord(cat, diff);
+    }
+    function nextWord(cat=state.category, diff=state.difficulty){
+      const key = cat.id + ':' + diff;
+      const pool = cat.levels[diff];
+      let q = state.queues.get(key);
+      if (!q || q.pos >= q.order.length) {
+        let order = shuffle(pool);
+        if (q && order.length > 1 && order[0].word === q.order[q.order.length - 1].word) order = [...order.slice(1), order[0]];
+        q = {order, pos:0};
+        state.queues.set(key, q);
+      }
+      const e = q.order[q.pos];
+      q.pos += 1;
+      state.entry = e;
+      state.progress = {n:q.pos, total:q.order.length};
+      state.guessed = new Set(); state.wrong = new Set(); state.hinted = new Set(); state.hintsLeft = diff==='easy'?2:1; state.shakeKey = null; state.phase='playing';
+      renderGame();
+    }
+    function renderGame(){
+      els.menuScreen.classList.add('hidden');
+      els.gameScreen.classList.remove('hidden');
+      els.categoryChip.textContent = `${state.category.emoji} ${state.category.name}`;
+      els.progressChip.textContent = `${state.progress.n} / ${state.progress.total}`;
+      const lettersCount = state.entry.word.length;
+      els.lettersLabel.textContent = `${lettersCount} ${plural(lettersCount)}`;
+      els.hintBtn.disabled = state.phase === 'won' || state.hintsLeft <= 0;
+      els.hintBtn.textContent = `💡 Подсказка · Осталось: ${state.hintsLeft}`;
+      renderWord(); renderKeyboard();
+    }
+    function renderWord(){
+      els.wordDisplay.innerHTML='';
+      const word = state.entry.word;
+      const long = word.length > 9;
+      word.split('').forEach((ch, i)=>{
+        const shown = state.phase === 'won' || state.guessed.has(normLetter(ch)) || state.hinted.has(i);
+        const div=document.createElement('div');
+        div.className = 'word-cell ' + (shown ? 'revealed' : 'hidden-cell');
+        if(long){ div.style.minWidth='34px'; div.style.width= window.innerWidth >= 640 ? '40px':'32px'; }
+        div.textContent = shown ? ch : '_';
+        els.wordDisplay.appendChild(div);
+      });
+    }
+    function renderKeyboard(){
+      els.keyboard.innerHTML='';
+      const disabledAll = state.phase === 'won';
+      const correctLetters = new Set(state.entry.word.split('').map(normLetter).filter(ch => state.guessed.has(ch)));
+      RUSSIAN_ALPHABET.forEach(letter => {
+        const isWrong = state.wrong.has(letter);
+        const isCorrect = correctLetters.has(letter);
+        const isUsed = isWrong || isCorrect;
+        const btn=document.createElement('button');
+        btn.className='letter';
+        if(isWrong) btn.classList.add('wrong');
+        if(isCorrect) btn.classList.add('correct');
+        if(state.shakeKey===letter) btn.classList.add('shake');
+        btn.textContent = letter;
+        btn.disabled = isUsed || disabledAll;
+        btn.onclick = ()=> handleLetter(letter);
+        els.keyboard.appendChild(btn);
+      });
+    }
+    function checkWin(nextGuessed=state.guessed, nextHinted=state.hinted){
+      const letters = state.entry.word.split('').map(normLetter);
+      return letters.every((c, i) => nextGuessed.has(c) || nextHinted.has(i));
+    }
+    function handleLetter(raw){
+      if(state.phase !== 'playing' || !state.entry) return;
+      const letter = normLetter(raw);
+      if(state.guessed.has(letter) || state.wrong.has(letter)) return;
+      sfx.press();
+      const letters = state.entry.word.split('').map(normLetter);
+      if(letters.includes(letter)){
+        const next = new Set(state.guessed); next.add(letter); state.guessed = next; sfx.correct();
+        renderWord(); renderKeyboard();
+        if(checkWin(next, state.hinted)) setTimeout(onWin, 450);
+      } else {
+        const next = new Set(state.wrong); next.add(letter); state.wrong = next; state.shakeKey = letter; sfx.wrong(); renderKeyboard();
+        setTimeout(()=>{ state.shakeKey = null; renderKeyboard(); }, 500);
+      }
+    }
+    function useHint(){
+      if(!state.entry || state.phase !== 'playing' || state.hintsLeft <= 0) return;
+      const hidden=[];
+      state.entry.word.split('').forEach((c,i)=>{ if(!state.guessed.has(normLetter(c)) && !state.hinted.has(i)) hidden.push(i); });
+      if(hidden.length === 0) return;
+      sfx.press();
+      const pos = hidden[Math.floor(Math.random()*hidden.length)];
+      const next = new Set(state.hinted); next.add(pos); state.hinted = next; state.hintsLeft -= 1; renderGame();
+      if(checkWin(state.guessed, next)) setTimeout(onWin, 450);
+    }
+    function onWin(){
+      state.phase='won';
+      renderWord(); renderKeyboard();
+      sfx.win();
+      showConfetti();
+      els.winWord.textContent = state.entry.word;
+      els.winImageWrap.innerHTML = '<div class="loading-placeholder">✨</div>';
+      els.winOverlay.classList.remove('hidden');
+      const img = new Image();
+      img.alt = state.entry.word;
+      img.onload = () => {
+        els.winImageWrap.innerHTML='';
+        img.className='loaded';
+        els.winImageWrap.appendChild(img);
+      };
+      img.onerror = () => { els.winImageWrap.innerHTML = '<div class="loading-placeholder">🌟</div>'; };
+      if (state.entry.image) img.src = state.entry.image;
+      else img.onerror();
+    }
+    function showConfetti(){
+      els.confetti.innerHTML='';
+      const colors=['#f5d66c','#cc90f3','#9ae7d0','#ef9fae','#a7c8ff'];
+      for(let i=0;i<60;i++){
+        const p=document.createElement('span');
+        p.className='confetti-piece';
+        p.style.left = (Math.random()*100)+'%';
+        p.style.width = (6 + Math.random()*8)+'px';
+        p.style.height = (8 + Math.random()*8)+'px';
+        p.style.background = colors[i % colors.length];
+        p.style.setProperty('--tx', ((Math.random() - .5) * 200) + 'vw');
+        p.style.setProperty('--ty', (80 + Math.random()*60) + 'vh');
+        p.style.setProperty('--rot', (360 + Math.random()*720) + 'deg');
+        p.style.setProperty('--delay', (Math.random()*.4)+'s');
+        p.style.setProperty('--dur', (1.8 + Math.random()*1.6)+'s');
+        els.confetti.appendChild(p);
+      }
+      els.confetti.classList.remove('hidden');
+    }
+
+    document.addEventListener('keydown', (e)=>{
+      const k = e.key.toUpperCase();
+      if(state.phase==='playing' && k.length===1 && /[А-ЯЁ]/.test(k)) handleLetter(k);
+    });
+    els.backBtn.onclick = showMenu;
+    els.hintBtn.onclick = useHint;
+    els.nextBtn.onclick = () => { els.winOverlay.classList.add('hidden'); els.confetti.classList.add('hidden'); nextWord(); };
+    els.menuBtn.onclick = showMenu;
+
+    // GitHub Pages публикует data.json рядом с index.html.
+    // В файле сохранены связи слов с готовыми изображениями images/*.webp.
+    async function initializeGame(){
+      els.catGrid.innerHTML = '<p class="footer-note">Загружаем категории…</p>';
+      renderDifficulty();
+      showMenu();
+      try {
+        const response = await fetch('./data.json', {cache:'no-cache'});
+        if(!response.ok) throw new Error('HTTP ' + response.status);
+        const data = await response.json();
+        if(!Array.isArray(data) || !data.length || !data.every(cat => cat.id && cat.levels)) {
+          throw new Error('Неверный формат data.json');
+        }
+        CATEGORIES = data;
+        renderCategories();
+      }catch(err){
+        console.error('Не удалось загрузить данные классика 18:', err);
+        els.catGrid.innerHTML = '<div class="footer-note">Не удалось загрузить игру. Проверь, что рядом с index.html лежит файл data.json, затем обнови страницу.</div>';
+      }
+    }
+    initializeGame();
+  </script>
+</body>
+</html>
