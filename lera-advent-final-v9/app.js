@@ -92,3 +92,70 @@ if (window.ResizeObserver) {
     new ResizeObserver(sendAdventHeight).observe(advent);
   }
 }
+
+(function setupVisiblePopup() {
+  const advent = document.getElementById("advent");
+  const overlay = document.getElementById("overlay");
+
+  if (!advent || !overlay) return;
+
+  // Если игра открыта напрямую на GitHub Pages,
+  // оставляем обычное центрирование окна.
+  if (window.parent === window) return;
+
+  advent.style.position = "relative";
+
+  const parentOrigin = "https://erofeeva-vika.tilda.ws";
+
+  window.addEventListener("message", function (event) {
+    if (event.source !== window.parent) return;
+    if (event.origin !== parentOrigin) return;
+
+    const data = event.data;
+
+    if (!data || data.type !== "lera-advent-visible-area") {
+      return;
+    }
+
+    const top = Number(data.top);
+    const height = Number(data.height);
+
+    if (!Number.isFinite(top)) return;
+    if (!Number.isFinite(height) || height < 40) return;
+
+    // Вместо центрирования по всему iframe
+    // центрируем окно по видимой области.
+    overlay.style.position = "absolute";
+    overlay.style.inset = "auto 0 auto 0";
+    overlay.style.top =
+      Math.max(0, top + window.scrollY) + "px";
+    overlay.style.height = height + "px";
+    overlay.style.width = "100%";
+
+    const modal = overlay.querySelector(".modal");
+
+    if (modal) {
+      modal.style.maxHeight =
+        Math.max(80, height - 24) + "px";
+    }
+  });
+
+  // Каждый раз при открытии окна запрашиваем
+  // актуальное положение экрана у Tilda.
+  const observer = new MutationObserver(function () {
+    if (!overlay.hidden) {
+      window.parent.postMessage({
+        type: "lera-advent-popup-open"
+      }, "*");
+    }
+  });
+
+  observer.observe(overlay, {
+    attributes: true,
+    attributeFilter: ["hidden"]
+  });
+
+  window.parent.postMessage({
+    type: "lera-advent-popup-open"
+  }, "*");
+})();
