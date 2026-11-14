@@ -73,3 +73,22 @@ $("#stop").onclick=()=>{preview=false;authorized=false;draw()};
 draw();
 })();
 if("serviceWorker"in navigator&&(location.protocol==="https:"||location.hostname==="localhost"))navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
+
+function sendAdventHeight() {
+  if (window.parent === window) return;
+
+  window.parent.postMessage({
+    type: "lera-advent-height",
+    height: document.documentElement.scrollHeight
+  }, "*");
+}
+
+window.addEventListener("load", sendAdventHeight);
+
+if (window.ResizeObserver) {
+  const advent = document.getElementById("advent");
+
+  if (advent) {
+    new ResizeObserver(sendAdventHeight).observe(advent);
+  }
+}
