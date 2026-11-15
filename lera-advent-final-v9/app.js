@@ -67,7 +67,25 @@ if(act==="toggle"){preview=!preview;draw();close()}
 if(act==="logout"){authorized=false;preview=false;draw();close()}
 if(act==="reset"){if(confirm("Сбросить все звёзды?")){done={};store();draw()}panel()}
 });
-$("#parent").onclick=login;$("#close").onclick=close;
+$("#parent").onclick = login;
+
+const closeButton = $("#close");
+
+// Закрытие при обычном клике
+closeButton.addEventListener("click", function (event) {
+  event.preventDefault();
+  event.stopPropagation();
+  close();
+});
+
+// Дополнительная обработка касания на телефоне
+closeButton.addEventListener("pointerup", function (event) {
+  if (event.pointerType === "mouse") return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  close();
+});
 $("#overlay").onclick=e=>{if(e.target===$("#overlay"))close()};
 $("#stop").onclick=()=>{preview=false;authorized=false;draw()};
 draw();
