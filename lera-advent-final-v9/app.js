@@ -177,3 +177,22 @@ if (window.ResizeObserver) {
     type: "lera-advent-popup-open"
   }, "*");
 })();
+
+(function () {
+  const content = document.getElementById("content");
+  const overlay = document.getElementById("overlay");
+
+  if (!content || !overlay) return;
+  if (window.parent === window) return;
+
+  new MutationObserver(function () {
+    if (overlay.hidden) return;
+
+    window.parent.postMessage(
+      { type: "lera-advent-popup-open" },
+      "https://erofeeva-vika.tilda.ws"
+    );
+  }).observe(content, {
+    childList: true
+  });
+})();
