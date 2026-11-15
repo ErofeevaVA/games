@@ -2,18 +2,45 @@
 #advent {
   min-height: 0;
 }
-.hero {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  margin: 0 auto 24px;
-}
 
-.hero-cover {
+/* Обложка адвент-календаря */
+#advent > header.hero {
   display: block;
   width: 100%;
-  max-width: 1100px;
-  height: auto;
-  border-radius: 24px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  padding: 0;
+  margin: 0;
+  background: none;
+  overflow: hidden;
+  line-height: 0;
 }
+
+/* Изображение без обрезки и искажений */
+#advent .hero-cover {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  border-radius: 0;
+}
+
+/* Не допускаем горизонтальной прокрутки */
+#advent {
+  width: 100%;
+  max-width: 950px;
+  overflow-x: hidden;
+}
+
+/* Мобильные устройства */
+@media (max-width: 640px) {
+  #advent > header.hero {
+    padding: 0;
+    margin: 0;
+  }
+
+  #advent .hero-cover {
+    width: 100%;
+    height: auto;
+  }
+}
+
