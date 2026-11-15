@@ -44,3 +44,43 @@
   }
 }
 
+/* Исправление крестика во всех попапах */
+#advent .modal > #close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+  margin: 0;
+
+  background: transparent;
+  border: none;
+  color: #28466a;
+  font-size: 28px;
+  line-height: 1;
+
+  z-index: 100;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+/* Не даём содержимому перекрывать крестик */
+#advent .modal {
+  position: relative;
+}
+
+#advent .modal #content {
+  position: relative;
+  z-index: 1;
+}
+
